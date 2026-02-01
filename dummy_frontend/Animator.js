@@ -2,18 +2,6 @@ console.log("🧠 Animator module loaded");
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js";
 
-/* =========================
-   BLENDSHAPE MAP
-   (extend per avatar)
-========================= */
-const BLENDSHAPE_MAP = {
-  eye_openness_left: "eyeWideLeft",
-  eye_openness_right: "eyeWideRight",
-  mouth_smile: "mouthSmile",
-  brow_lower: "browDownLeft",
-  brow_raise_left: "browOuterUpLeft",
-  brow_raise_right: "browOuterUpRight"
-};
 
 export class Animator {
   constructor() {
@@ -29,7 +17,7 @@ export class Animator {
 	amplitude: 0.05
     };
     this.arousal = 0;  
-
+    this.postureInstructions = [];
   }
 
   /* =========================
@@ -49,18 +37,20 @@ export class Animator {
     });
 
     console.log("🦴 Bones detected:", Object.keys(this.bones));
-    console.log("🙂 Face meshes:", this.faceMeshes.length);
+    console.log("🙂 Face meshes:", Object.keys(this.faceMeshes));
+    console.group("🙂 FACE MESH + MORPH TARGETS");
+
+    avatar.traverse((obj) => {
+      if (obj.isSkinnedMesh && obj.morphTargetDictionary) {
+        console.log("🧩 Mesh:", obj.name);
+        console.log("➡ Morph targets:", Object.keys(obj.morphTargetDictionary));
+      }
+     });
+
+console.groupEnd();
+
   }
 
-   mapBlendshape(key) {
-  const MAP = {
-    eye_openness_left: "eyeWideLeft",
-    eye_openness_right: "eyeWideRight",
-    mouth_smile: "mouthSmile",
-    brow_lower: "browDownLeft"
-  };
-  return MAP[key];
-}
 
 
   /* =========================
@@ -83,6 +73,7 @@ export class Animator {
     this.time += delta;
 
     this.updateBreathing(delta);
+    this.updatePosture(delta);
     this.updateFaceProcedural();
     this.updateFaceMorphs(delta);
   }
@@ -95,15 +86,10 @@ export class Animator {
     const dict = mesh.morphTargetDictionary;
     const influences = mesh.morphTargetInfluences;
 
-    for (const [key, target] of Object.entries(this.targetFaceState)) {
-      const morphName = this.mapBlendshape(key);
-      if (!morphName || dict[morphName] === undefined) continue;
+    for (const [morph, target] of Object.entries(this.targetFaceState)) {
+      if (dict[morph] === undefined) continue;
 
-      const i = dict[morphName];
-      const current = influences[i] ?? 0;
-
-      // slightly faster than before so expressions are visible
-      influences[i] += (target - current) * 0.15;
+      influences[dict[morph]] += (target - influences[dict[morph]]) * 0.2;
     }
   });
 }
@@ -123,7 +109,7 @@ export class Animator {
 }
 
 
-    if (this.arousal > 0.5 && this.bone.Jaw) {
+    if (this.arousal > 0.5 && this.bones.Jaw) {
     this.bones.Jaw.rotation.x = 0.02 * Math.sin(this.time * 3);
   }
   }
@@ -147,6 +133,75 @@ export class Animator {
     this.bones.spine1.rotation.x = breath * amp * 0.5;
   }
 }
+
+
+/* ============================
+   PROCEDURAL INSTRUCTIONS
+============================ */
+
+  applyProceduralInstructions(proceduralInstructions) {
+    proceduralInstructions.forEach((inst) => {
+      if (inst.layer === "breathing" && inst.arousal !== undefined){
+        this.arousal = inst.arousal;
+      }
+    });
+
+  }
+
+/* ===========================
+   FACIAL INSTRUCTIONS
+=========================== */
+
+  applyFaceInstructions(faceInstructions) {
+    faceInstructions.forEach(({ morph, value, weight }) => {
+      if (value === undefined) return;
+
+      const current = this.targetFaceState[morph] ?? 0;
+      const w = weight ?? 1;
+
+      this.targetFaceState[morph] = current * (1-w) + value *w;
+    });
+  }
+
+
+
+/* =============================
+   INSTRUCTIONS APPLICATION
+============================ */
+
+  applyInstructions(instructions) {
+    if (instructions.bones) {
+      this.postureInstructions = instructions.bones;
+    }
+
+    if (instructions.face) {
+      this.applyFaceInstructions(instructions.face);
+    }
+
+    if (instructions.procedural) {
+      this.applyProceduralInstructions(instructions.procedural);
+    }
+  }
+
+
+
+
+/* ==============================
+    POSTURE INSTRUCTIONS
+============================== */
+
+  updatePosture() {
+    if (!this.postureInstructions.length) return;
+
+    this.postureInstructions.forEach(({ bone, axis, value, weight }) => {
+      const b = this.bones[bone];
+      if (!b) return;
+
+      const w = weight ?? 0.5;
+      b.rotation[axis] += (value - b.rotation[axis]) * w;
+    });
+  }
+
 
 
 }

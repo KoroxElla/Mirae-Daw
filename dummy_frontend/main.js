@@ -2,6 +2,8 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.m
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js";
 import { Animator } from "./Animator.js";
+import { MapperTranslator } from "../emotion_animation/mapperTranslator.js";
+
 
 console.log("🔥 main.js running");
 
@@ -17,16 +19,14 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 );
-camera.position.set(0, 1.6, 3);
+
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById("container").appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1.4, 0);
 controls.enablePan = false;
-controls.update();
 
 /* =========================
    LIGHTING
@@ -46,41 +46,58 @@ const animator = new Animator();
 ========================= */
 const loader = new GLTFLoader();
 
-loader.load("./avatar_wolf.glb", (gltf) => {
+loader.load("./testavatar.glb", (gltf) => {
   const avatar = gltf.scene;
   scene.add(avatar);
+  scene.add(new THREE.AxesHelper(2));
+
+  avatar.scale.set(1.2, 1.2, 1.2);
 
   // Center avatar automatically
   const box = new THREE.Box3().setFromObject(avatar);
   const center = box.getCenter(new THREE.Vector3());
-  avatar.position.sub(centre);
+  const size = box.getSize(new THREE.Vector3());
+  avatar.position.sub(center);
+
+  avatar.position.y += size.y/2;
   avatar.rotation.y = Math.PI;
 
+  // Camera positioning (NOW size exists)
+  camera.position.set(0, size.y * 0.8, size.z * 2.5);
+  controls.target.set(0, size.y * 0.5, 0);
+  controls.update();
+
+
   animator.bindAvatar(avatar);
+  const translator = new MapperTranslator({
+    bones: animator.bones,
+    morphs: animator.morphTargets
+  });
+  
+ 
+
+
+  const emotionPayload = {
+    emotion: "sadness",
+    posture : ["slouched", "sad_arms" ],
+    arousal : 0.3,
+    valence : -0.6
+  }
 
   // Initial test schema
-  animator.applySchema({
-    face: {
-      eye_openness_left: 0.3,
-      eye_openness_right: 0.22,
-      brow_lower: 0.6
-    },
-    procedural: {
-      eye_twitch: {
-        side: "left",
-        amplitude: 0.15,
-        frequency: 6
-      },
-      blink: {
-        rate: 0.25,
-        duration: 0.12
-      },
-      breathing: {
-        amplitude: 0.05,
-        rate: 0.35
-      }
-    }
-  });
+  const instructions = translator.translate(emotionPayload);
+  animator.applyInstructions(instructions);
+ // animator.applyInstructions({
+ //   face: [
+  //    { morph: "mouthFrownLeft", value: 0.6 },
+    //  { morph: "mouthFrownRight", value: 0.6 },
+  //    { morph: "browInnerUp", value: 0.5 },
+  //    { morph: "eyeSquintLeft", value: 0.3 },
+ //     { morph: "eyeSquintRight", value: 0.3 }
+ //   ]
+ // });
+
+
 });
 
 /* =========================
