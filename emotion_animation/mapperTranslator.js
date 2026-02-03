@@ -22,6 +22,74 @@ export class MapperTranslator {
 
 	}
 
+	/* =========================================
+	   MULTI-EMOTION BLENDING
+	   ===================================== */
+
+	translateMultiple(emotionWeights){
+		const final = {
+			bones : [],
+			face : [],
+			procedural : []
+		};
+
+		const boneAccum = {};
+		const faceAccum = {};
+		let arousalSum = 0;
+		let totalWeight = 0;
+
+		Object.entries(emotionWeights).forEach(([emotion, weight]) => {
+			const inst = this.translate({ emotion });
+
+			totalWeigth += weight;
+
+			/* --------BONES------------*/
+
+			inst.bones.forEach(b => {
+				const key = b.bone + "_" + b.axis;
+
+				if (!boneAccum[key]) {
+					boneAccum[key] = {...b, value : 0};
+				}
+
+				boneAccum[key].value += b.value * weight;
+			});
+
+
+			/* ----------FACE----------- */
+
+			inst.face.forEach(f => {
+            			if (!faceAccum[f.morph]) faceAccum[f.morph] = 0;
+            			faceAccum[f.morph] += f.value * weight;
+        		});
+
+        		/* ---------- PROCEDURAL ---------- */
+        		inst.procedural.forEach(p => {
+            			if (p.layer === "breathing" && p.arousal !== undefined) {
+                			arousalSum += p.arousal * weight;
+            			}
+        		});
+    		});
+
+    		/* normalize */
+    		final.bones = Object.values(boneAccum);
+
+    		final.face = Object.entries(faceAccum).map(([morph, value]) => ({
+        		morph,
+        		value
+    		}));
+
+    		if (totalWeight > 0) {
+        		final.procedural.push({
+            			layer: "breathing",
+            			arousal: arousalSum / totalWeight
+        		});
+    		}
+
+    		return final;
+		
+	}
+
 	translateBreathing(emotionPayload,instructions) {
 		if (emotionPayload.arousal === undefined) return;
 

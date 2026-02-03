@@ -18,6 +18,13 @@ export class Animator {
     };
     this.arousal = 0;  
     this.postureInstructions = [];
+    this.blink = {
+      rate : 0.25,
+      hold : 0.12,
+      timer : 0,
+      progress : 0,
+      closing : false
+    };
   }
 
   /* =========================
@@ -51,21 +58,6 @@ console.groupEnd();
 
   }
 
-
-
-  /* =========================
-     SCHEMA APPLICATION
-  ========================= */
-  applySchema(schema) {
-    if (schema.face) {
-      Object.assign(this.targetFaceState, schema.face);
-    }
-
-    if (schema.emotion?.arousal !== undefined) {
-      this.arousal = schema.emotion.arousal;
-    }
-  }
-
   /* =========================
      UPDATE LOOP
   ========================= */
@@ -73,13 +65,37 @@ console.groupEnd();
     this.time += delta;
 
     this.updateBreathing(delta);
+    this.updateBlink(delta);
     this.updatePosture(delta);
-    this.updateFaceProcedural();
     this.updateFaceMorphs(delta);
   }
 
+
+  /* =============================
+   INSTRUCTIONS APPLICATION
+============================ */
+
+  applyInstructions(instructions) {
+    this.postureInstructions = instructions.bones || [];
+
+    if (instructions.face) {
+      instructions.face.forEach(({ morph, value }) => {
+        this.targetFaceState[morph] = value;
+      });
+    }
+
+    if (instructions.procedural) {
+      this.applyProceduralInstructions(instructions.procedural);
+
+      if (instructions.procedural.breathing) {
+        this.breathing = instructions.procedural.breathing;
+      }
+    }
+  }
+
+
   /* =========================
-     FACE TRANSITIONS
+     FACE 
   ========================= */
   updateFaceMorphs(delta) {
   this.faceMeshes.forEach((mesh) => {
@@ -89,109 +105,19 @@ console.groupEnd();
     for (const [morph, target] of Object.entries(this.targetFaceState)) {
       if (dict[morph] === undefined) continue;
 
-      influences[dict[morph]] += (target - influences[dict[morph]]) * 0.2;
+      const i = dict[morph];
+      const current = influences[i] ?? 0;
+
+      influences[i] += (target - current) * 0.15;
     }
   });
 }
-
-
-  /* =========================
-     FACE PROCEDURAL
-  ========================= */
-  updateFaceProcedural(delta) {
-    if (this.bones.Head) {
-    this.bones.Head.rotation.y += Math.sin(this.time * 0.6) * 0.002;
-    this.bones.Head.rotation.x += Math.sin(this.time * 0.8) * 0.0015;
-  }
-    if (this.arousal > 0.5) {
-  this.targetFaceState.mouth_open = 
-    0.2 + Math.sin(this.time * 3) * 0.1;
-}
-
-
-    if (this.arousal > 0.5 && this.bones.Jaw) {
-    this.bones.Jaw.rotation.x = 0.02 * Math.sin(this.time * 3);
-  }
-  }
-  /* =========================
-     BREATHING (BODY)
-  ========================= */
-  updateBreathing(delta) {
-  const baseRate = 0.35;
-  const baseAmp = 0.05;
-
-  const rate = baseRate + this.arousal * 0.6;
-  const amp  = baseAmp  + this.arousal * 0.03;
-
-  const t = this.time * Math.PI * 2 * rate;
-  const breath = Math.sin(t);
-
-  if (this.bones.spine2) {
-    this.bones.spine2.rotation.x = breath * amp;
-  }
-  if (this.bones.spine1) {
-    this.bones.spine1.rotation.x = breath * amp * 0.5;
-  }
-}
-
-
-/* ============================
-   PROCEDURAL INSTRUCTIONS
-============================ */
-
-  applyProceduralInstructions(proceduralInstructions) {
-    proceduralInstructions.forEach((inst) => {
-      if (inst.layer === "breathing" && inst.arousal !== undefined){
-        this.arousal = inst.arousal;
-      }
-    });
-
-  }
-
-/* ===========================
-   FACIAL INSTRUCTIONS
-=========================== */
-
-  applyFaceInstructions(faceInstructions) {
-    faceInstructions.forEach(({ morph, value, weight }) => {
-      if (value === undefined) return;
-
-      const current = this.targetFaceState[morph] ?? 0;
-      const w = weight ?? 1;
-
-      this.targetFaceState[morph] = current * (1-w) + value *w;
-    });
-  }
-
-
-
-/* =============================
-   INSTRUCTIONS APPLICATION
-============================ */
-
-  applyInstructions(instructions) {
-    if (instructions.bones) {
-      this.postureInstructions = instructions.bones;
-    }
-
-    if (instructions.face) {
-      this.applyFaceInstructions(instructions.face);
-    }
-
-    if (instructions.procedural) {
-      this.applyProceduralInstructions(instructions.procedural);
-    }
-  }
-
-
-
 
 /* ==============================
     POSTURE INSTRUCTIONS
 ============================== */
 
   updatePosture() {
-    if (!this.postureInstructions.length) return;
 
     this.postureInstructions.forEach(({ bone, axis, value, weight }) => {
       const b = this.bones[bone];
@@ -200,6 +126,78 @@ console.groupEnd();
       const w = weight ?? 0.5;
       b.rotation[axis] += (value - b.rotation[axis]) * w;
     });
+  }
+
+
+  /* =========================
+     BREATHING (BODY)
+  ========================= */
+  updateBreathing(delta) {
+
+  const t = this.time * Math.PI * 2 * this.breathing.rate;
+  const breath = Math.sin(t) * this.breathing.amplitude;
+
+  if (this.bones.Spine2) {
+    this.bones.Spine2.rotation.x = breath;
+  }
+  if (this.bones.Spine1) {
+    this.bones.Spine1.rotation.x = breath * 0.5;
+  }
+}
+
+
+  /* =============================
+     BLINK 
+  ============================= */
+
+  updateBlink(delta) {
+    const b = this.blink;
+
+    b.timer += delta;
+
+    const interval = 1 / b.rate;
+
+    if (b.timer >= interval) {
+      b.timer = 0;
+      b.closing = true;
+      b.progress = 0;
+    }
+
+    if (b.closing) {
+      b.progress += delta / b.hold;
+
+      const v = Math.min(b.progress, 1);
+
+      this.targetFaceState.eyeBlinkLeft = v;
+      this.targetFaceState.eyeBlinkRight = v;
+
+      if (b.progress >= 1) {
+      b.closing = false;
+      }
+    }
+  }
+
+
+
+/* ============================
+   PROCEDURAL INSTRUCTIONS
+============================ */
+
+  applyProceduralInstructions(Instr) {
+    Instr.forEach((inst) => {
+      switch(inst.layer) {
+
+        case "breathing":
+          this.arousal = inst.arousal ?? this.arousal;
+          break;
+
+        case "blink":
+          this.blink.rate = inst.rateMultiplier ?? this.blink.rate;
+          this.blink.hold = inst.holdTime ?? this.blink.hold;
+          break;
+      }
+    });
+
   }
 
 
