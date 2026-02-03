@@ -70,32 +70,27 @@ loader.load("./testavatar.glb", (gltf) => {
 
   animator.bindAvatar(avatar);
   const translator = new MapperTranslator({
-    bones: animator.bones,
-    morphs: animator.morphTargets
+    bones: animator.bones
   });
-  
- 
 
+/* =========================
+   SIMULATED AI OUTPUT
+   (pretend this came from Python)
+========================= */
 
-  const emotionPayload = {
-    emotion: "sadness",
-    posture : ["slouched", "sad_arms" ],
-    arousal : 0.3,
-    valence : -0.6
-  }
+const emotionWeights = {
+  sadness: 0.8,
+  anxiety: 0.2
+};
 
-  // Initial test schema
-  const instructions = translator.translate(emotionPayload);
-  animator.applyInstructions(instructions);
- // animator.applyInstructions({
- //   face: [
-  //    { morph: "mouthFrownLeft", value: 0.6 },
-    //  { morph: "mouthFrownRight", value: 0.6 },
-  //    { morph: "browInnerUp", value: 0.5 },
-  //    { morph: "eyeSquintLeft", value: 0.3 },
- //     { morph: "eyeSquintRight", value: 0.3 }
- //   ]
- // });
+/* =========================
+   TRANSLATE + APPLY
+========================= */
+
+const instructions = translator.translateMultiple(emotionWeights);
+
+animator.applyInstructions(instructions);
+
 
 
 });
