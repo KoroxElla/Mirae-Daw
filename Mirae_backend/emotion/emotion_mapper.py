@@ -1,7 +1,5 @@
-<<<<<<< HEAD
-from emotion_templates import EMOTION_TEMPLATES
-from emotion_modifiers import EMOTION_MODIFIERS
-=======
+from .emotion_templates import EMOTION_TEMPLATES
+
 # emotion_mapper.py
 """
 🎭 EMOTION MAPPER - Detailed animation library
@@ -16,6 +14,43 @@ All values are based on actual bone names from your avatar and ARKit blendshapes
 """
 
 import math
+
+# ======================================================
+# Blinking behaviour presets
+# ======================================================
+
+BLINKING_MODS = {
+    "default": {
+        "rate": 0.25,        # blinks per second
+        "hold_time": 0.12
+    },
+
+    "sad": {
+        "rate_multiplier": 0.6,   # slower blinking
+        "hold_time": 0.18
+    },
+
+    "anxious": {
+        "rate_multiplier": 1.6,   # fast blinking
+        "hold_time": 0.08
+    },
+
+    "fearful": {
+        "rate_multiplier": 0.4,   # wide eyes, fewer blinks
+        "hold_time": 0.05
+    },
+
+    "happy": {
+        "rate_multiplier": 1.1,
+        "hold_time": 0.10
+    },
+
+    "tired": {
+        "rate_multiplier": 0.8,
+        "hold_time": 0.25
+    }
+}
+
 
 # ============================================================================
 # 1. POSTURE MAPPINGS - Bone rotations for each posture component
@@ -97,7 +132,6 @@ POSTURE_TO_BONES = {
     },
     
     "heavy": {
-        "Spine": {"x": 0.08, "transition_speed": 0.8},
         "Spine1": {"x": 0.12, "transition_speed": 0.8},
         "Spine2": {"x": 0.15, "transition_speed": 0.8}
     },
@@ -678,170 +712,29 @@ FACE_TO_BLENDSHAPES = {
     }
 }
 
-# ============================================================================
-# 3. BREATHING MODIFICATIONS
-# ============================================================================
-# Maps arousal values to breathing parameters
+# =========================================================
+# 3. BREATHING
+# =========================================================
 
-BREATHING_MODS = {
-    "default": {
-        "rate": 0.35,        # Breaths per second
-        "amplitude": 0.05,   # Max spine rotation in radians
-        "spine_bones": ["Spine2", "Spine1"]
-    },
-    
-    "arousal_to_rate": lambda arousal: 0.35 * (1 + arousal * 0.8),  # Higher arousal = faster breathing
-    "arousal_to_amplitude": lambda arousal: 0.05 * (1 + arousal * 0.6),  # Higher arousal = deeper breaths
-    
-    # Emotion-specific overrides
-    "anxious": {"rate_multiplier": 1.8, "amplitude_multiplier": 1.3},
-    "fearful": {"rate_multiplier": 2.2, "amplitude_multiplier": 0.7},
-    "sad": {"rate_multiplier": 0.6, "amplitude_multiplier": 1.4},
-    "angry": {"rate_multiplier": 1.4, "amplitude_multiplier": 1.5},
-    "happy": {"rate_multiplier": 0.9, "amplitude_multiplier": 1.1},
-    "excited": {"rate_multiplier": 1.6, "amplitude_multiplier": 1.4},
-    "tired": {"rate_multiplier": 0.5, "amplitude_multiplier": 1.2}
-}
-
-# ============================================================================
-# 4. BLINKING MODIFICATIONS
-# ============================================================================
-
-BLINKING_MODS = {
-    "default": {
-        "rate": 3.0,        # Blinks per minute
-        "hold_time": 0.15   # Seconds eyes stay closed
-    },
-    
-    # Emotion-specific overrides
-    "sad": {"rate_multiplier": 0.7, "hold_time": 0.25},
-    "anxious": {"rate_multiplier": 2.5, "hold_time": 0.08},
-    "fearful": {"rate_multiplier": 1.2, "hold_time": 0.2},
-    "angry": {"rate_multiplier": 0.5, "hold_time": 0.1},
-    "happy": {"rate_multiplier": 0.8, "hold_time": 0.18},
-    "focused": {"rate_multiplier": 0.4, "hold_time": 0.12},
-    "surprised": {"rate_multiplier": 0.1, "hold_time": 0.05},  # Very few blinks when surprised
-    "bored": {"rate_multiplier": 1.5, "hold_time": 0.3}        # More frequent, longer blinks
-}
-
-# ============================================================================
-# 5. PROCEDURAL MOVEMENT MAPPINGS
-# ============================================================================
-
-PROCEDURAL_MOVEMENTS = {
-    "movement_speed_to_head_sway": lambda speed: 0.002 * speed,
-    "movement_speed_to_micro_movements": lambda speed: 0.001 * speed,
-    
-    # Head micro-movements based on arousal
-    "arousal_to_head_jitter": lambda arousal: 0.0002 * arousal if arousal > 0.7 else 0.0,
-    
-    # Eye darting based on arousal and valence
-    "arousal_to_eye_dart_speed": lambda arousal: 2.0 + arousal * 3.0,
-    "valence_to_eye_brightness": lambda valence: 0.3 + valence * 0.4,
-}
-
-# ============================================================================
-# 6. HELPER FUNCTIONS
-# ============================================================================
-
-def get_posture_animation(posture_components, intensity=1.0, available_bones=None):
+def get_breathing_params(arousal: float):
     """
-    Convert posture components to bone animations.
-    
-    Args:
-        posture_components: List of posture descriptors
-        intensity: Emotion intensity (0.0 to 1.0)
-        available_bones: Set of bones that exist in the avatar
-        
-    Returns:
-        Dict of {bone_name: {axis: value, transition_speed: speed}}
+    Convert arousal → breathing rate/amplitude
     """
-    animation = {}
-    
-    for component in posture_components:
-        if component in POSTURE_TO_BONES:
-            bone_data = POSTURE_TO_BONES[component]
-            
-            for bone_name, adjustments in bone_data.items():
-                # Skip if bone doesn't exist
-                if available_bones and bone_name not in available_bones:
-                    continue
-                
-                if bone_name not in animation:
-                    animation[bone_name] = {}
-                
-                for axis, value in adjustments.items():
-                    if axis == "transition_speed":
-                        # Transition speed is not scaled by intensity
-                        animation[bone_name][axis] = value
-                    else:
-                        # Apply intensity scaling to rotation values
-                        animation[bone_name][axis] = value * intensity
-    
-    return animation
 
+    base_rate = 0.35
+    base_amp = 0.05
 
-def get_face_animation(face_components, intensity=1.0):
-    """
-    Convert face components to blendshape animations.
-    
-    Args:
-        face_components: List of face descriptors
-        intensity: Emotion intensity (0.0 to 1.0)
-        
-    Returns:
-        Dict of {blendshape_name: value}
-    """
-    animation = {}
-    
-    for component in face_components:
-        if component in FACE_TO_BLENDSHAPES:
-            blendshape_data = FACE_TO_BLENDSHAPES[component]
-            
-            for blendshape_name, value in blendshape_data.items():
-                # Apply intensity scaling
-                animation[blendshape_name] = value * intensity
-    
-    return animation
->>>>>>> 3955391b90074b9e78cbe8f2a6d976bb2560d632
+    rate = base_rate * (1 + arousal * 0.8)
+    amp = base_amp * (1 + arousal * 0.6)
 
-
-def get_breathing_params(arousal, emotion_name=None):
-    """
-    Get breathing parameters based on arousal and emotion.
-    
-    Args:
-        arousal: Arousal value (0.0 to 1.0)
-        emotion_name: Optional emotion name for specific overrides
-        
-    Returns:
-        Dict with rate and amplitude
-    """
-    base_rate = BREATHING_MODS["default"]["rate"]
-    base_amplitude = BREATHING_MODS["default"]["amplitude"]
-    
-    # Apply arousal-based modifications
-    rate = BREATHING_MODS["arousal_to_rate"](arousal)
-    amplitude = BREATHING_MODS["arousal_to_amplitude"](arousal)
-    
-    # Apply emotion-specific overrides if available
-    if emotion_name and emotion_name in BREATHING_MODS:
-        override = BREATHING_MODS[emotion_name]
-        rate *= override.get("rate_multiplier", 1.0)
-        amplitude *= override.get("amplitude_multiplier", 1.0)
-    
     return {
         "rate": rate,
-        "amplitude": amplitude,
-        "spine_bones": BREATHING_MODS["default"]["spine_bones"]
+        "amplitude": amp
     }
 
-
-<<<<<<< HEAD
-def blend_emotions(normalized_emotions):
-    accumulator = {}
-    procedural_blocks = {}
-=======
+# ============================================================================
+# 4. CONVERSION HELPER FUNCTIONS
+# ============================================================================
 def get_blinking_params(emotion_name, intensity=1.0):
     """
     Get blinking parameters for an emotion.
@@ -872,107 +765,95 @@ def get_blinking_params(emotion_name, intensity=1.0):
         "rate": rate,
         "hold_time": hold_time
     }
->>>>>>> 3955391b90074b9e78cbe8f2a6d976bb2560d632
 
-
-<<<<<<< HEAD
-        base = EMOTION_TEMPLATES[emotion]
-        modifier = EMOTION_MODIFIERS.get(emotion, {})
-
-        for source in (base, modifier):
-
-            # ✅ STEP 1: Collect procedural data (NO blending)
-            if "procedural" in source:
-                procedural_blocks.update(source["procedural"])
-
-            # ✅ STEP 2: Blend numeric animation values
-            for category, params in source.items():
-                if category == "procedural":
-                    continue
-
-                accumulator.setdefault(category, {})
-
-                for param, value in params.items():
-
-                    # Support {"base": x} or raw numbers
-                    if isinstance(value, dict):
-                        if "base" not in value:
-                            continue
-                        numeric_value = value["base"]
-                    else:
-                        numeric_value = value
-
-                    accumulator[category].setdefault(
-                        param, {"sum": 0.0, "weight": 0.0}
-                    )
-
-                    accumulator[category][param]["sum"] += numeric_value * intensity
-                    accumulator[category][param]["weight"] += intensity
-
-    # ✅ STEP 3: Final averaged schema
-    final_schema = {}
-
-    for category, params in accumulator.items():
-        final_schema[category] = {}
-        for param, data in params.items():
-            if data["weight"] > 0:
-                final_schema[category][param] = round(
-                    data["sum"] / data["weight"], 3
-                )
-
-    # ✅ STEP 4: Attach procedural instructions untouched
-    if procedural_blocks:
-        final_schema["procedural"] = procedural_blocks
-
-    return final_schema
-=======
-def blend_animations(animation1, animation2, blend_factor):
+def get_posture_animation(postures, intensity=1.0):
     """
-    Blend two animations together.
-    
-    Args:
-        animation1: First animation dict
-        animation2: Second animation dict
-        blend_factor: 0.0 = all animation1, 1.0 = all animation2
-        
-    Returns:
-        Blended animation dict
+    ["slouched","sad_arms"] → bone dict
     """
-    if blend_factor <= 0:
-        return animation1
-    if blend_factor >= 1:
-        return animation2
-    
-    blended = {}
-    
-    # Get all unique keys
-    all_keys = set(animation1.keys()) | set(animation2.keys())
-    
-    for key in all_keys:
-        val1 = animation1.get(key, {})
-        val2 = animation2.get(key, {})
-        
-        if isinstance(val1, dict) and isinstance(val2, dict):
-            # Blend nested dictionaries (for bones with multiple axes)
-            blended[key] = {}
-            all_subkeys = set(val1.keys()) | set(val2.keys())
-            
-            for subkey in all_subkeys:
-                subval1 = val1.get(subkey, 0)
-                subval2 = val2.get(subkey, 0)
-                
-                if isinstance(subval1, (int, float)) and isinstance(subval2, (int, float)):
-                    blended[key][subkey] = subval1 + (subval2 - subval1) * blend_factor
+
+    result = {}
+
+    for p in postures:
+        if p not in POSTURE_TO_BONES:
+            continue
+
+        for bone, axes in POSTURE_TO_BONES[p].items():
+
+            result.setdefault(bone, {})
+
+            for axis, value in axes.items():
+
+                if axis == "transition_speed":
+                    result[bone][axis] = value
                 else:
-                    # For non-numeric values (like transition_speed), use animation2 if blend_factor > 0.5
-                    blended[key][subkey] = subval2 if blend_factor > 0.5 else subval1
-        elif isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
-            # Blend numeric values
-            blended[key] = val1 + (val2 - val1) * blend_factor
-        else:
-            # For other types, use animation2 if blend_factor > 0.5
-            blended[key] = val2 if blend_factor > 0.5 else val1
-    
-    return blended
->>>>>>> 3955391b90074b9e78cbe8f2a6d976bb2560d632
+                    result[bone][axis] = value * intensity
 
+    return result
+
+def get_face_animation(faces, intensity=1.0):
+    """
+    ["smile"] → blendshape dict
+    """
+
+    result = {}
+
+    for f in faces:
+        if f not in FACE_TO_BLENDSHAPES:
+            continue
+
+        for k, v in FACE_TO_BLENDSHAPES[f].items():
+            result[k] = v * intensity
+
+    return result
+
+# =========================================================
+# 5. BLENDING ENGINE
+# =========================================================
+
+def _blend_two(a, b, factor):
+    """
+    Linear interpolation between two dict animations
+    """
+
+    if factor <= 0:
+        return a
+    if factor >= 1:
+        return b
+
+    out = {}
+
+    keys = set(a.keys()) | set(b.keys())
+
+    for k in keys:
+
+        v1 = a.get(k, 0)
+        v2 = b.get(k, 0)
+
+        if isinstance(v1, dict) and isinstance(v2, dict):
+            out[k] = _blend_two(v1, v2, factor)
+
+        elif isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+            out[k] = v1 + (v2 - v1) * factor
+
+        else:
+            out[k] = v2 if factor > 0.5 else v1
+
+    return out
+
+def blend_multiple(animations):
+    """
+    animations = [
+        (animation_dict, weight),
+        (animation_dict, weight)
+    ]
+    """
+
+    if not animations:
+        return {}
+
+    result = animations[0]
+
+    for anim in animations[1:]:
+        result = _blend_two(result, anim, 0.5)
+
+    return result
