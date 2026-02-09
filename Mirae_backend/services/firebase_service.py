@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
+from services.crypto_service import encrypt_text
 
 cred = credentials.Certificate("config/firebase_key.json")
 firebase_admin.initialize_app(cred)
@@ -34,6 +35,8 @@ def create_user(user_id, email, display_name=""):
 #Implementing the Journal entry
 def save_entry(user_id, text, weights, instructions):
 
+    encrypted_text = encrypt_text(text)
+
     entry_ref = (
         db.collection("users")
         .document(user_id)
@@ -42,7 +45,7 @@ def save_entry(user_id, text, weights, instructions):
     )
 
     entry_ref.set({
-        "text": text,
+        "text": encrypted_text,
         "createdAt": datetime.utcnow(),
 
         "emotions": weights,
