@@ -10,8 +10,8 @@ db = firestore.client()
 
 #Implementing Users
 
-def create_user(user_id, email, display_name=""):
-    db.collection("users").document(user_id).set({
+def create_user(user_id, email, password_hash=None, display_name=""):
+    user_data = {
         "email": email,
         "displayName": display_name,
         "createdAt": datetime.utcnow(),
@@ -30,29 +30,28 @@ def create_user(user_id, email, display_name=""):
             "preferredPrompts": [],
             "comfortLevel": "medium"
         }
-    })
+    }
+
+    if password_hash:
+        user_data["passwordHash"] = password_hash
+
+    db.collection("users").document(user_id).set(user_data)
 
 #Implementing the Journal entry
 def save_entry(user_id, text, weights, instructions):
 
     encrypted_text = encrypt_text(text)
 
-    entry_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("entries")
-        .document()
-    )
-
-    entry_ref.set({
+    db.collection("users")\
+        .document(user_id)\
+        .collection("entries")\
+        .add({
         "text": encrypted_text,
         "createdAt": datetime.utcnow(),
 
         "emotions": weights,
         "animation": instructions,
 
-        "primaryEmotion": max(weights, key=weights.get),
-        "hasCrisisKeywords": False
     })
 
 
