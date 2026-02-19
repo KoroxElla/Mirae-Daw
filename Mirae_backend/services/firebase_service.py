@@ -75,3 +75,29 @@ def save_insight(user_id, data):
       .collection("insights")\
       .add(data)
 
+#Saving Avatar details
+def save_avatar(user_id, avatar_url):
+    print("🔥 /avatar/save called")
+    print("User ID:", user_id)
+    db.collection("users")\
+      .document(user_id)\
+      .collection("avatar")\
+      .document("current")\
+      .set({
+          "avatarUrl": avatar_url,
+          "updatedAt": datetime.utcnow()
+      })
+
+
+# Fetch avatar
+def get_avatar(user_id):
+    doc = db.collection("users")\
+        .document(user_id)\
+        .collection("avatar")\
+        .document("current")\
+        .get()
+
+    if doc.exists:
+        return doc.to_dict()
+    return None
+

@@ -1,21 +1,33 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react'
 import * as THREE from 'three'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF, Environment, Stage } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
 
 interface AvatarProps {
   position?: [number, number, number]
-  animation: string // 'idle', 'happy', 'sad'
+  animation: string 
+  modelUrl: string
+  showBackground?: boolean 
+  backgroundColor?: string
+  scale?: number
 }
 
-export function Avatar({ position = [0, 0, 0], animation }: AvatarProps) {
+export function Avatar({ 
+  position = [0,-1.3,0],
+  modelUrl, 
+  animation,
+  showBackground = true, 
+  backgroundColor = '#2a2a2a', 
+  scale = 3.5 }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const currentAction = useRef<THREE.AnimationAction | null>(null)
   const [isReady, setIsReady] = useState(false)
-  
+ 
+  showBackground = true,
+  backgroundColor = '#2a2a2a' 
   // Load avatar model
-  const { scene } = useGLTF('/models/avatar.glb')
+  const { scene } = useGLTF(modelUrl)
   
   // Load FBX animations
   const { animationClips, isLoading } = useFBXAnimations()
@@ -275,10 +287,67 @@ export function Avatar({ position = [0, 0, 0], animation }: AvatarProps) {
 
   return (
     <group ref={group}>
-      <primitive object={sceneRef.current} />
+      {showBackground && (
+        <>
+          {/* Circular gradient background */}
+          <mesh position={[0, 0, -0.5]} scale={[2.5, 2.5, 1]}>
+            <planeGeometry args={[2, 2]} />
+            <shaderMaterial
+              uniforms={{
+                color1: { value: new THREE.Color(backgroundColor) },
+                color2: { value: new THREE.Color('#1a1a1a') },
+              }}
+              vertexShader={`
+                varying vec2 vUv;
+                void main() {
+                  vUv = uv;
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+              `}
+              fragmentShader={`
+                uniform vec3 color1;
+                uniform vec3 color2;
+                varying vec2 vUv;
+                
+                void main() {
+                  float dist = distance(vUv, vec2(0.5, 0.5));
+                  float alpha = 1.0 - smoothstep(0.3, 0.8, dist);
+                  vec3 color = mix(color1, color2, vUv.y);
+                  gl_FragColor = vec4(color, alpha);
+                }
+              `}
+              transparent
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          
+          {/* Border ring */}
+          <mesh position={[0, -1.2, -0.3]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[1.0, 0.03, 16, 100]} />
+            <meshStandardMaterial color="#4a4a4a" emissive="#222222" />
+          </mesh>
+          <mesh 
+            position={[0, -1.3, -0.2]} 
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <planeGeometry args={[2.2, 2.2]} />
+            <meshStandardMaterial 
+              color="#222222" 
+              transparent 
+              opacity={0.2}
+              emissive="#000000"
+            />
+          </mesh>
+        </>
+      )}
+      
+      {/* Environment lighting for better appearance */}
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[5, 5, 5]} intensity={1} />
+      <directionalLight position={[-5, 5, 5]} intensity={0.5} />
+      
+      <primitive object={sceneRef.current} scale= {scale} position={position} />
     </group>
   )
 }
 
-// Preload the model
-useGLTF.preload('/models/avatar.glb')
