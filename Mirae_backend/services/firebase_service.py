@@ -38,7 +38,7 @@ def create_user(user_id, email, password_hash=None, display_name=""):
     db.collection("users").document(user_id).set(user_data)
 
 #Implementing the Journal entry
-def save_entry(user_id, text, weights, instructions):
+def save_entry(user_id, text, weights, arbitration):
 
     encrypted_text = encrypt_text(text)
 
@@ -49,22 +49,24 @@ def save_entry(user_id, text, weights, instructions):
         "text": encrypted_text,
         "createdAt": datetime.utcnow(),
 
-        "emotions": weights,
-        "animation": instructions,
+        "weights": weights,
+        "arbitration": arbitration,
 
     })
 
 
 #The Avatar entity
-def update_avatar_state(user_id, emotion, instructions):
+def update_avatar_state(user_id, arbitration, weights):
 
     db.collection("users")\
       .document(user_id)\
       .collection("avatar_state")\
       .document("current")\
       .set({
-          "currentEmotion": emotion,
-          "animation": instructions,
+          "currentEmotion": arbitration["emotions"],
+          "animation": arbitration["animations"],
+          "mode": arbitration["mode"],
+          "weights": weights
           "lastUpdated": datetime.utcnow()
       })
 
@@ -87,6 +89,18 @@ def save_avatar(user_id, avatar_url):
           "avatarUrl": avatar_url,
           "updatedAt": datetime.utcnow()
       })
+# Getting the avatar state
+def get_avatar_state(user_id):
+    doc = db.collection("users")\
+        .document(user_id)\
+        .collection("avatar_state")\
+        .document("current")\
+        .get()
+
+    if doc.exists:
+        return doc.to_dict()
+
+    return None
 
 
 # Fetch avatar
@@ -101,3 +115,24 @@ def get_avatar(user_id):
         return doc.to_dict()
     return None
 
+# Delete a journal entry based on user id and journal entry id
+def delete_entry(user_id, entry_id):
+    db.collection("users")\
+      .document(user_id)\
+      .collection("entries")\
+      .document(entry_id)\
+      .delete()
+
+# Getting the latest journal entry based on timestamp
+def get_latest_entry(user_id):
+    docs = db.collection("users")\
+        .document(user_id)\
+        .collection("entries")\
+        .order_by("createdAt", direction=firestore.Query.DESCENDING)\
+        .limit(1)\
+        .stream()
+
+    for doc in docs:
+        return doc.to_dict()
+
+    return None

@@ -47,7 +47,7 @@ export default function MainPage({
               {avatarData?.avatarUrl && (
                 <Avatar 
                   modelUrl={avatarData.avatarUrl}
-                  animation="idle"
+                  animation="sad"
                   scale={1.5} 
                   showBackground={true}
                   backgroundColor="#FFC494"

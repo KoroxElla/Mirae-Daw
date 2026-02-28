@@ -11,12 +11,26 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 # -------------------------------------------------
 
 LEXICON = {}
+EMOTION_TO_ANIMATION = {
+    "joy": "happy.fbx",
+    "sadness": "sad.fbx",
+    "anger": "angry.fbx",
+    "fear": "scared.fbx",
+    "surprise": "reacting.fbx",
+    "trust": "trust.fbx",
+    "anticipation": "excited.fbx",
+    "disgust": "disappointed.fbx",
+    "positive": "celebrating.fbx",
+    "negative": "depressed.fbx",
+    "neutral": "idle.fbx"
+}
 
 with open("sentiment/NRC-Emotion-Lexicon-Wordlevel-v0.92.txt", "r") as f:
     for line in f:
         parts = line.strip().split("\t")
-        if len(parts) >= 2:
-            word, emotion = parts[0], parts[1]
+        if len(parts) == 3:
+          word, emotion, value = parts
+          if value == "1":
             LEXICON.setdefault(word, []).append(emotion)
 
 
@@ -56,9 +70,25 @@ def analyze_text(text: str) -> dict:
     counts = Counter(emotions)
 
     if not counts:
-        return {"neutral": 1.0}
+        return {
+            "primary_emotion": "neutral",
+            "animation": "idle.fbx",
+            "weights": {"neutral": 1.0}
+        }
 
     total = sum(counts.values())
+    weights = {k: v / total for k, v in counts.items()}
 
-    return {k: v / total for k, v in counts.items()}
+    primary_emotion = max(weights, key=weights.get)
+
+    animation_file = EMOTION_TO_ANIMATION.get(
+        primary_emotion,
+        "idle.fbx"
+    )
+
+    return {
+        "primary_emotion": primary_emotion,
+        "animation": animation_file,
+        "weights": weights
+    }
 
