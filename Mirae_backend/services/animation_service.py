@@ -1,101 +1,134 @@
-from emotion.emotion_templates import EMOTION_TEMPLATES
-from emotion.emotion_mapper import (
-        get_posture_animation,
-        get_face_animation,
-        get_breathing_params,
-        get_blinking_params,
-        blend_multiple
-)
+EMOTION_CLASSES = {
+    "positive": {"joy", "trust", "anticipation", "positive", "surprise"},
+    "negative": {"anger", "sadness", "fear", "disgust", "negative"},
+    "neutral": {"neutral"}
+}
 
 
-# ---------------------------------
-# helpers
-# ---------------------------------
+EMOTION_TO_ANIMATION = {
+    "joy": "happy.fbx",
+    "trust": "trust.fbx",
+    "anticipation": "excited.fbx",
+    "positive": "celebrating.fbx",
+    "surprise": "reacting.fbx",
 
-def normalize(weights: dict):
-    total = sum(weights.values())
-    if total == 0:
-        return {"neutral": 1.0}
-    return {k: v / total for k, v in weights.items()}
+    "anger": "angry.fbx",
+    "sadness": "sad.fbx",
+    "fear": "scared.fbx",
+    "disgust": "disappointed.fbx",
+    "negative": "depressed.fbx",
 
-# =========================================================
-# Core mapping logic
-# =========================================================
+    "neutral": "idle.fbx"
+}
 
-def build_animation(weights):
-    weights = normalize(weights)
+DECAY_FACTOR = 0.6
 
-    animations = []
+def arbitrate_emotion(weights: dict):
+    """
+    Full emotional arbitration logic.
+    Returns:
+        {
+            "mode": "single" | "loop",
+            "emotions": [list],
+            "animations": [list]
+        }
+    """
 
-    for emotion_name, weight in weights.items():
+    if not weights:
+        return {
+            "mode": "single",
+            "emotions": ["neutral"],
+            "animations": ["idle.fbx"]
+        }
 
-        if emotion_name not in EMOTION_TEMPLATES:
-            continue
+    # -------------------------
+    # STEP 1 — Determine dominant class
+    # -------------------------
 
-        template = EMOTION_TEMPLATES[emotion_name]
-
-        posture_anim = get_posture_animation(
-            template["posture"],
-            intensity=template["intensity"] * weight
-        )
-
-        face_anim = get_face_animation(
-            template["face"],
-            intensity=template["intensity"] * weight
-        )
-
-        breathing = get_breathing_params(
-            template["arousal"],
-        )
-
-        blinking = get_blinking_params(
-            emotion_name,
-            template["intensity"] * weight
-        )
-
-        animations.append({
-            "posture": posture_anim,
-            "face": face_anim,
-            "breathing": breathing,
-            "blinking": blinking
-        })
-
-    blended = blend_multiple(animations)
-
-    # --------------------------------------------------
-    # Convert to Animator.js instruction format
-    # --------------------------------------------------
-
-    instructions = {
-        "bones": [],
-        "face": [],
-        "procedural": {}
+    class_totals = {
+        "positive": 0,
+        "negative": 0,
+        "neutral": 0
     }
 
-    for bone, axes in blended.get("posture", {}).items():
-    
-        if not isinstance(axes, dict):
-            continue
-        for axis, value in axes.items():
-            if axis == "transition_speed":
-                continue
+    for emotion, weight in weights.items():
+        for class_name, class_set in EMOTION_CLASSES.items():
+            if emotion in class_set:
+                class_totals[class_name] += weight
 
-            instructions["bones"].append({
-                "bone": bone,
-                "axis": axis,
-                "value": value,
-                "weight": 0.5
-            })
+    dominant_class = max(class_totals, key=class_totals.get)
 
-    for morph, value in blended.get("face", {}).items():
-        instructions["face"].append({
-            "morph": morph,
-            "value": value
-        })
+    # -------------------------
+    # STEP 2 — Filter emotions inside dominant class
+    # -------------------------
 
-    instructions["procedural"] = {
-        "breathing": blended.get("breathing", {}),
-        "blink": blended.get("blinking", {})
+    class_emotions = {
+        e: w for e, w in weights.items()
+        if e in EMOTION_CLASSES[dominant_class]
     }
 
-    return instructions
+    if not class_emotions:
+        return {
+            "mode": "single",
+            "emotions": ["neutral"],
+            "animations": ["idle.fbx"]
+        }
+
+    max_weight = max(class_emotions.values())
+
+    top_emotions = [
+        e for e, w in class_emotions.items()
+        if w == max_weight
+    ]
+
+    # -------------------------
+    # STEP 3 — Determine playback mode
+    # -------------------------
+
+    if len(top_emotions) == 1:
+        emotion = top_emotions[0]
+        return {
+            "mode": "single",
+            "emotions": [emotion],
+            "animations": [EMOTION_TO_ANIMATION.get(emotion, "idle.fbx")]
+        }
+
+    else:
+        # Multiple equal emotions → loop mode
+        return {
+            "mode": "loop",
+            "emotions": top_emotions,
+            "animations": [
+                EMOTION_TO_ANIMATION.get(e, "idle.fbx")
+                for e in top_emotions
+            ]
+        }
+
+
+def apply_emotional_decay(new_weights, previous_weights):
+    """
+    Blends previous emotional state with new state.
+    """
+
+    if not previous_weights:
+        return new_weights
+
+    blended = {}
+
+    all_keys = set(new_weights.keys()) | set(previous_weights.keys())
+
+    for key in all_keys:
+        new_val = new_weights.get(key, 0)
+        old_val = previous_weights.get(key, 0)
+
+        blended[key] = (
+            old_val * DECAY_FACTOR +
+            new_val * (1 - DECAY_FACTOR)
+        )
+
+    # Normalize again
+    total = sum(blended.values())
+    if total > 0:
+        blended = {k: v / total for k, v in blended.items()}
+
+    return blended
