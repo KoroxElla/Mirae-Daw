@@ -7,8 +7,7 @@ avatar_bp = Blueprint("avatar", __name__, url_prefix="/avatar")
 # GET /avatar/me
 @avatar_bp.route("/me", methods=["GET"])
 @require_auth
-def fetch_avatar():
-    user_id = request.user.get("uid")
+def fetch_avatar(user_id):
 
     avatar = get_avatar(user_id)
 

@@ -16,9 +16,17 @@ export function useFBXAnimations() {
     setIsLoading(true)
 
     const animations = [
-      { name: 'idle', path: '/animations/idle.fbx' },
-      { name: 'happy', path: '/animations/happy.fbx' },
-      { name: 'sad', path: '/animations/sad.fbx' }
+      { name: 'idle.fbx', path: '/animations/idle.fbx' },
+      { name: 'happy.fbx', path: '/animations/happy.fbx' },
+      { name: 'sad.fbx', path: '/animations/sad.fbx' },
+      { name: 'celebrating.fbx', path: '/animations/celebrating.fbx'},
+      { name: 'angry.fbx', path: '/animations/angry.fbx'},
+      { name: 'depressed.fbx', path: '/animations/depressed.fbx'},
+      { name: 'reacting.fbx', path: '/animations/reacting.fbx'},
+      { name: 'disappointed.fbx', path: '/animations/disappointed.fbx'},
+      { name: 'trust.fbx', path: '/animations/trust.fbx'},
+      { name: 'excited.fbx', path: '/animations/excited.fbx'},
+      { name: 'scared.fbx', path: '/animations/scared.fbx'}
     ]
 
     const loadedClips: AnimationClips = {}

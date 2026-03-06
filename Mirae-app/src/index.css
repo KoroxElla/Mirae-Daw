@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+@theme {
+  --font-comic: 'Comic Sans MS', cursive, sans-serif;
+  
+  --animate-write-pulse: write-pulse 1s infinite;
+  
+  @keyframes write-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+}
+
+@layer utilities {
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .perspective-\[1500px\] {
+    perspective: 1500px;
+  }
+
+  .text-shadow-sm {
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .font-comic {
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+  }
+
+  .-rotate-30 {
+    transform: rotate(-30deg);
+  }
+}
+
+@keyframes write-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-write-pulse {
+  animation: write-pulse 1s infinite;
+}

@@ -2,10 +2,10 @@ import React, { useRef, useEffect, useState, useMemo } from 'react'
 import * as THREE from 'three'
 import { useGLTF, Environment, Stage } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
+import { useAvatarEmotion } from './journal/useAvatarEmotion';
 
 interface AvatarProps {
   position?: [number, number, number]
-  animation: string 
   modelUrl: string
   showBackground?: boolean 
   backgroundColor?: string
@@ -15,7 +15,6 @@ interface AvatarProps {
 export function Avatar({ 
   position = [0,-1.3,0],
   modelUrl, 
-  animation,
   showBackground = true, 
   backgroundColor = '#2a2a2a', 
   scale = 3.5 }: AvatarProps) {
@@ -23,6 +22,12 @@ export function Avatar({
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const currentAction = useRef<THREE.AnimationAction | null>(null)
   const [isReady, setIsReady] = useState(false)
+
+  const { currentAnimation } = useAvatarEmotion({
+    onAnimationChange: (animation) => {
+      console.log('Avatar animation changing to:', animation);
+    }
+  });
  
   showBackground = true,
   backgroundColor = '#2a2a2a' 
@@ -231,9 +236,9 @@ export function Avatar({
   // Handle animation changes
   useEffect(() => {
     if (isReady && !isLoading && Object.keys(animationClips).length > 0) {
-      playAnimation(animation)
+      playAnimation(currentAnimation)
     }
-  }, [animation, isReady, isLoading, animationClips])
+  }, [currentAnimation, isReady, isLoading, animationClips])
 
   // Animation loop
   useEffect(() => {

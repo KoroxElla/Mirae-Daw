@@ -1,32 +1,50 @@
-
-
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useEffect } from 'react';
+import { motion, useAnimation } from 'framer-motion';
 
 interface Props {
-  textLength: number;
+  position: { x: number; y: number };
+  isErasing: boolean;
+  pageWidth: number;
+  lineHeight: number;
 }
 
-const AnimatedPen: React.FC<Props> = ({ textLength }) => {
+const AnimatedPen: React.FC<Props> = ({ position, isErasing, pageWidth, lineHeight }) => {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({
+      x: position.x,
+      y: position.y,
+      transition: { type: 'spring', stiffness: 500, damping: 30 }
+    });
+  }, [position, controls]);
+
   return (
-    <motion.img
-      src="/journal/pen.png"
-      alt="Writing Pen"
-      className="absolute w-20 pointer-events-none"
-      animate={{
-        x: (textLength % 40) * 5,
-        y: Math.floor(textLength / 40) * 20
-      }}
-      transition={{
-        type: "spring",
-        stiffness: 200,
-        damping: 15
-      }}
+    <motion.div
+      className="absolute pointer-events-none z-[100]"
+      animate={controls}
+      initial={{ x: 0, y: 0 }}
       style={{
-        bottom: 30,
-        right: 50
+        top: 0,
+        left: 0,
       }}
-    />
+    >
+      <div 
+        style={{
+          transform: `translateY(${isErasing ? -1 : -45}px) rotate(${isErasing ? 180 : -12}deg)`,
+          transformOrigin: isErasing ? 'top left' : 'bottom left',
+          transition: 'transform 0.3s ease',
+          width: '2rem',
+          height: 'auto',
+        }}
+      >
+        <img 
+          src="/journal/pen.png" 
+          alt="Pen" 
+          className="w-19 h-12"
+        />
+      </div>
+    </motion.div>
   );
 };
 
