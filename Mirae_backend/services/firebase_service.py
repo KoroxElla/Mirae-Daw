@@ -66,7 +66,7 @@ def update_avatar_state(user_id, arbitration, weights):
           "currentEmotion": arbitration["emotions"],
           "animation": arbitration["animations"],
           "mode": arbitration["mode"],
-          "weights": weights
+          "weights": weights,
           "lastUpdated": datetime.utcnow()
       })
 
@@ -136,3 +136,42 @@ def get_latest_entry(user_id):
         return doc.to_dict()
 
     return None
+# Saving the journal settings
+def save_journal_settings(user_id, title, cover):
+    db.collection("users")\
+      .document(user_id)\
+      .collection("journal")\
+      .document("settings")\
+      .set({
+          "title": title,
+          "cover": cover,
+          "updatedAt": datetime.utcnow()
+      })
+
+#Retrieving the journal settings
+def get_journal_settings(user_id):
+    doc = db.collection("users")\
+        .document(user_id)\
+        .collection("journal")\
+        .document("settings")\
+        .get()
+
+    if doc.exists:
+        return doc.to_dict()
+
+    return {
+        "title": "My Journal",
+        "cover": "journalcover_1.jpeg"
+    }
+#Retrievig all journal entries
+def get_entries(user_id):
+    docs = db.collection("users")\
+        .document(user_id)\
+        .collection("entries")\
+        .order_by("createdAt")\
+        .stream()
+
+    return [
+        {**doc.to_dict(), "id": doc.id}
+        for doc in docs
+    ]

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Homepage from "./components/Homepage";
 import MainPage from "./components/MainPage";
 import AvatarCustomizer from "./components/AvatarCustomizer";
+import { AvatarProvider } from './contexts/AvatarContext';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -66,6 +67,7 @@ export default function App() {
 
   // 3️⃣ Default after login → MainPage
   return (
+    <AvatarProvider>
     <MainPage
       avatarData={avatarData}
       onCustomize={() => setCurrentPage("customizer")}
@@ -76,6 +78,7 @@ export default function App() {
       }}
 
     />
+   </AvatarProvider>
   );
 }
 
