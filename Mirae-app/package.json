@@ -24,6 +24,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-pageflip": "^2.0.3",
+    "recharts": "^3.8.0",
     "slate": "^0.123.0",
     "tailwindcss": "^4.1.18",
     "three": "^0.182.0",

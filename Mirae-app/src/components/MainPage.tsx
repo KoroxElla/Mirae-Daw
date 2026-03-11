@@ -3,7 +3,8 @@ import { useGLTF, OrbitControls } from "@react-three/drei";
 import { Avatar } from "./Avatar";
 import { Canvas } from "@react-three/fiber";
 import JournalBook from "./journal/JournalBook";
-import { useAvatarEmotion } from "./journal/useAvatarEmotion"; // We'll create this
+import ReminiscePage from "./ReminiscePage";
+import { useAvatarEmotion } from "./journal/useAvatarEmotion"; 
 
 interface MainPageProps {
   avatarData: any;
@@ -47,6 +48,25 @@ export default function MainPage({
       }
     }
   }, []);
+
+  const tabStyles = {
+    avatar: {
+      ring: "ring-orange-400",
+      bg: "bg-orange-100",
+    },
+    journal: {
+      ring: "ring-blue-400",
+      bg: "bg-blue-100",
+    },
+    reminisce: {
+      ring: "ring-orange-400",
+      bg: "bg-orange-100",
+    },
+    chat: {
+      ring: "ring-amber-700",
+      bg: "bg-amber-100",
+    },
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -94,7 +114,7 @@ export default function MainPage({
         );
 
       case "reminisce":
-        return <h2 className="text-xl">Reminisce Page (Coming Next)</h2>;
+        return <ReminiscePage userId={userId} />;
 
       case "chat":
         return <h2 className="text-xl">Chat Time Page (Coming Next)</h2>;
@@ -131,7 +151,7 @@ export default function MainPage({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-start justify-start bg-[#FFC494] p-4 overflow-auto">
+      <div className={`flex-1 flex flex-col items-start justify-start p-4 overflow-auto transition-colors duration-500 ${tabStyles[activeTab].bg}`}>
         {renderContent()}
       </div>
 
@@ -141,7 +161,7 @@ export default function MainPage({
           <img
             src="/main_icons/avatar.png"
             className={`w-8 h-8 ${
-              activeTab === "avatar" ? "opacity-100" : "opacity-50"
+              activeTab === "avatar" ? `ring-4 ${tabStyles.avatar.ring} p-1` : "opacity-50"
             }`}
             alt="avatar"
           />
@@ -151,7 +171,7 @@ export default function MainPage({
           <img
             src="/main_icons/journal.png"
             className={`w-8 h-8 ${
-              activeTab === "journal" ? "opacity-100" : "opacity-50"
+              activeTab === "journal" ? `ring-4 ${tabStyles.journal.ring} p-1` : "opacity-50"
             }`}
             alt="journal"
           />
@@ -161,7 +181,7 @@ export default function MainPage({
           <img
             src="/main_icons/reminisce.png"
             className={`w-8 h-8 ${
-              activeTab === "reminisce" ? "opacity-100" : "opacity-50"
+              activeTab === "reminisce" ? `ring-4 ${tabStyles.reminisce.ring} p-1` : "opacity-50"
             }`}
             alt="reminisce"
           />
@@ -171,7 +191,7 @@ export default function MainPage({
           <img
             src="/main_icons/chattime.png"
             className={`w-8 h-8 ${
-              activeTab === "chat" ? "opacity-100" : "opacity-50"
+              activeTab === "chat" ? `ring-4 ${tabStyles.chat.ring} p-1` : "opacity-50"
             }`}
             alt="chat"
           />
