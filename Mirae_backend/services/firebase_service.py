@@ -2,6 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 from services.crypto_service import encrypt_text
+from services.emotion_category import get_category
 
 cred = credentials.Certificate("config/firebase_key.json")
 firebase_admin.initialize_app(cred)
@@ -41,6 +42,8 @@ def create_user(user_id, email, password_hash=None, display_name=""):
 def save_entry(user_id, text, weights, arbitration):
 
     encrypted_text = encrypt_text(text)
+    primary_emotion = arbitration["emotions"]
+    category = get_category(primary_emotion)
 
     db.collection("users")\
         .document(user_id)\
@@ -51,6 +54,9 @@ def save_entry(user_id, text, weights, arbitration):
 
         "weights": weights,
         "arbitration": arbitration,
+        "primaryEmotion": primary_emotion,
+        "emotionScore": weights.get(primary_emotion, 0)
+        "emotionCategory": category
 
     })
 
@@ -71,11 +77,19 @@ def update_avatar_state(user_id, arbitration, weights):
       })
 
 #The insight entity
-def save_insight(user_id, data):
-    db.collection("users")\
-      .document(user_id)\
-      .collection("insights")\
-      .add(data)
+def get_latest_insight(user_id):
+
+    docs = db.collection("users")\
+        .document(user_id)\
+        .collection("insights")\
+        .order_by("generatedAt", direction=firestore.Query.DESCENDING)\
+        .limit(1)\
+        .stream()
+
+    for doc in docs:
+        return doc.to_dict()
+
+    return None
 
 #Saving Avatar details
 def save_avatar(user_id, avatar_url):
@@ -175,3 +189,25 @@ def get_entries(user_id):
         {**doc.to_dict(), "id": doc.id}
         for doc in docs
     ]
+
+#Retrieving the primary emotion its weight and the date of the entry
+def get_emotion_history(user_id):
+
+    docs = db.collection("users")\
+        .document(user_id)\
+        .collection("entries")\
+        .order_by("createdAt")\
+        .stream()
+
+    history = []
+
+    for doc in docs:
+        data = doc.to_dict()
+
+        history.append({
+            "date": data["createdAt"],
+            "emotion": data["arbitration"]["emotions"][0],
+            "weights": data["weights"]
+        })
+
+    return history
