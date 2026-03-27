@@ -6,3 +6,7 @@ export const emotionColors: Record<string, string> = {
   anxious: "#9D4EDD",
   angry: "#FF6B6B",
 };
+
+export function getEmotionColors(emotion: string) {
+  return emotionColors[emotion] || "#CCCCCC";
+}

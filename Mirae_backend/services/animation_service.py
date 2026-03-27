@@ -1,23 +1,17 @@
 EMOTION_CLASSES = {
-    "positive": {"joy", "trust", "anticipation", "positive", "surprise"},
-    "negative": {"anger", "sadness", "fear", "disgust", "negative"},
+    "positive": {"joy",  "surprise"},
+    "negative": {"anger", "sadness", "fear", "disgust"},
     "neutral": {"neutral"}
 }
 
 
 EMOTION_TO_ANIMATION = {
     "joy": "happy.fbx",
-    "trust": "trust.fbx",
-    "anticipation": "excited.fbx",
-    "positive": "celebrating.fbx",
     "surprise": "reacting.fbx",
-
     "anger": "angry.fbx",
     "sadness": "sad.fbx",
     "fear": "scared.fbx",
     "disgust": "disappointed.fbx",
-    "negative": "depressed.fbx",
-
     "neutral": "idle.fbx"
 }
 

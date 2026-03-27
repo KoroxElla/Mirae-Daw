@@ -1,8 +1,6 @@
 EMOTION_CATEGORY = {
 
     "joy": "positive",
-    "trust": "positive",
-    "anticipation": "positive",
 
     "sadness": "negative",
     "anger": "negative",
@@ -15,4 +13,8 @@ EMOTION_CATEGORY = {
 
 
 def get_category(emotion):
+
+    if isinstance(emotion, list):
+        emotion = emotion[0]
+
     return EMOTION_CATEGORY.get(emotion, "neutral")

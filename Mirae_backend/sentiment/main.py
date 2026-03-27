@@ -1,14 +1,19 @@
 from transformers import pipeline
+import requests
+import os
+
 
 # -------------------------------------------------
-# LOAD MODEL ONCE
+# LOAD MODEL
 # -------------------------------------------------
 
-emotion_classifier = pipeline(
-    "text-classification",
-    model="j-hartmann/emotion-english-distilroberta-base",
-    top_k=None
-)
+HF_API_KEY = os.getenv("HF_API_KEY")
+
+MODEL_URL = "https://api-inference.huggingface.co/models/j-hartmann/emotion-english-distilroberta-base"
+
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}"
+}
 
 # -------------------------------------------------
 # MAP EMOTIONS → ANIMATIONS
@@ -34,11 +39,34 @@ def analyze_text(text: str) -> dict:
     Returns emotion weights dictionary for avatar animation.
     """
 
-    results = emotion_classifier(text)[0]
+    payload = {
+        "inputs": text
+    }
 
-    weights = {}
-    for r in results:
-        weights[r["label"]] = r["score"]
+    response = requests.post(
+        MODEL_URL,
+        headers=headers,
+        json=payload
+    )
+
+    data = response.json()
+
+    if isinstance(data, dict) and "error" in data:
+      print("HF API error:", data["error"])
+
+    return {
+        "primary_emotion": "neutral",
+        "animation": "idle.fbx",
+        "weights": {"neutral": 1.0}
+    }
+
+    # Normal successful response
+    result = data[0]
+
+    weights = {
+        item["label"]: item["score"]
+        for item in result
+    }
 
     # find strongest emotion
     primary_emotion = max(weights, key=weights.get)

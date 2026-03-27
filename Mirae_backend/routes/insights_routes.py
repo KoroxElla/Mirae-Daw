@@ -15,7 +15,7 @@ def emotion_history(user_id):
     return jsonify(history), 200
 
 
-@insight_bp.route("/weekly", methods=["GET"])
+@insights_bp.route("/weekly", methods=["GET"])
 @require_auth
 def weekly_insight(user_id):
 

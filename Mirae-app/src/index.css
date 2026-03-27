@@ -41,3 +41,153 @@
 .animate-write-pulse {
   animation: write-pulse 1s infinite;
 }
+
+.scrapbook-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  padding: 40px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+
+}
+
+.scrapbook-card {
+  width: 260px;
+  background: #fff7ed;
+  padding: 20px;
+  border: 1px solid #e6d5b8;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  position: relative;
+  margin: 10px;
+}
+
+.scrapbook-card:hover {
+  transform: scale(1.05) rotate(0deg) !important;
+}
+
+.emotion-tag {
+  position: absolute;
+  top: -10px;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: white;
+  font-size: 12px;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.scrap-preview {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #5d4a36;
+  line-height: 1.4;
+}
+
+.scrap-date {
+  font-size: 11px;
+  opacity: 0.6;
+  display: block;
+  margin-top: 10px;
+  text-align: right;
+  font-style: italic;
+}
+
+.scrap-popup {
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+}
+
+.scrap-popup-card {
+  background: white;
+  padding: 35px;
+  border-radius: 14px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.scrap-popup-card button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 15px;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.scrap-popup-card h3 {
+  margin: 20px 0 10px;
+  color: #333;
+  font-size: 24px;
+}
+
+.scrap-popup-card p {
+  color: #666;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+/* GameTimeline styles */
+.game-timeline-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  background: #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.timeline-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.timeline-node:hover {
+  transform: scale(1.2);
+}
+
+.timeline-dot {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  border: 3px solid white;
+}
+
+.timeline-date {
+  font-size: 12px;
+  margin-top: 5px;
+  color: #666;
+  background: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}

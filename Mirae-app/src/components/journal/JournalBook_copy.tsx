@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import HTMLFlipBook from 'react-pageflip';
+import React, { useState, useEffect, useRef } from 'react';
 import JournalCover from './JournalCover';
 import JournalPage from './JournalPage';
 import JournalEditor from './JournalEditor';
 import type { JournalEntry, JournalSettings } from './types';
 import { useAvatarEmotion } from './useAvatarEmotion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface JournalBookProps {
   userId: string;
@@ -16,12 +16,15 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     title: 'My Journal',
     cover: 'journalcover_1.jpeg'
   });
+  const [currentPage, setCurrentPage] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const flipBook = React.useRef<any>(null);
   
+  // Get the avatar updater from the hook
   const { updateFromBackend } = useAvatarEmotion();
+  
+  const bookRef = useRef<HTMLDivElement>(null);
 
   // Load journal data on mount
   useEffect(() => {
@@ -45,7 +48,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     }
   };
 
-  // API Calls
+  // API Calls (same as before)
   const fetchJournalSettings = async (): Promise<JournalSettings> => {
     const response = await fetch('http://localhost:5000/journal/settings', {
       headers: {
@@ -128,6 +131,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       const result = await saveJournalEntry(content);
       console.log('Emotions detected:', result.emotions, 'Mode:', result.mode);
       
+      // Update avatar state in context
       if (result.emotions && result.mode) {
         updateFromBackend({
           mode: result.mode,
@@ -140,13 +144,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       
       setIsEditing(false);
       setEditingEntry(null);
-      
-      // Flip to the new page
-      setTimeout(() => {
-        if (flipBook.current) {
-          flipBook.current.pageFlip().flip(updatedEntries.length);
-        }
-      }, 100);
+      setCurrentPage(updatedEntries.length);
     } catch (error) {
       console.error('Error saving entry:', error);
     }
@@ -156,6 +154,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     try {
       const result = await deleteJournalEntry(entryId);
       
+      // Update avatar state after deletion
       if (result.emotions && result.mode) {
         updateFromBackend({
           mode: result.mode,
@@ -165,6 +164,10 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       
       const updatedEntries = await fetchAllEntries();
       setEntries(updatedEntries);
+      
+      if (currentPage > updatedEntries.length) {
+        setCurrentPage(Math.max(0, updatedEntries.length));
+      }
     } catch (error) {
       console.error('Error deleting entry:', error);
     }
@@ -173,28 +176,17 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   const handleEditEntry = (entry: JournalEntry) => {
     setEditingEntry(entry);
     setIsEditing(true);
+    setCurrentPage(entry.id ? entries.findIndex(e => e.id === entry.id) + 1 : 0);
   };
 
   const startNewEntry = () => {
     setEditingEntry(null);
     setIsEditing(true);
+    setCurrentPage(entries.length + 1);
   };
 
-  const onFlip = (e: any) => {
-    // Optional: Handle flip events
-    console.log('Current page: ' + e.data);
-  };
-
-  const nextPage = () => {
-    if (flipBook.current) {
-      flipBook.current.pageFlip().flipNext();
-    }
-  };
-
-  const prevPage = () => {
-    if (flipBook.current) {
-      flipBook.current.pageFlip().flipPrev();
-    }
+  const flipToPage = (pageIndex: number) => {
+    setCurrentPage(pageIndex);
   };
 
   if (isLoading) {
@@ -224,36 +216,18 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
         </button>
       </div>
 
-      {/* Book Pages - Using react-pageflip */}
-      <div className="flex justify-center">
-        <HTMLFlipBook 
-          width={400} 
-          height={550}
-          maxShadowOpacity={0.5}
-          drawShadow={true}
-          showCover={true}
-          size="fixed"
-          minWidth={300}
-          maxWidth={500}
-          minHeight={400}
-          maxHeight={600}
-          flippingTime={800}
-          usePortrait={true}
-          startPage={0}
-          onFlip={onFlip}
-          ref={flipBook}
-          className="shadow-2xl"
-          style={{}}
-          startZIndex={0}
-          autoSize={true}
-          clickEventForward={false}
-          useMouseEvents={true}
-          swipeDistance={30}
-          mobileScrollSupport={true}
-        >
-          {/* Cover Page */}
-          <div className="page" style={{ background: 'transparent' }}>
-            <div className="page-content p-0">
+      {/* Book Pages */}
+      <div className="relative w-[800px] h-[600px] mx-auto perspective-[1500px]" ref={bookRef}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            initial={{ opacity: 0, rotateY: -90 }}
+            animate={{ opacity: 1, rotateY: 0 }}
+            exit={{ opacity: 0, rotateY: 90 }}
+            transition={{ duration: 0.5 }}
+            className="absolute w-full h-full preserve-3d"
+          >
+            {currentPage === 0 ? (
               <JournalCover
                 cover={settings.cover}
                 onSwitchCover={() => handleSwitchCover(
@@ -263,38 +237,33 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
                 )}
                 journalName={settings.title}
               />
-            </div>
-          </div>
-
-          {/* Journal Entry Pages */}
-          {entries.map((entry, index) => (
-            <div className="page" key={entry.id}>
-              <div className="page-content p-5 bg-amber-50 bg-[url('/journal/openjournal.png')] bg-cover bg-center">
-                <JournalPage
-                  entry={entry}
-                  onEdit={() => handleEditEntry(entry)}
-                  onDelete={() => handleDeleteEntry(entry.id)}
-                />
-              </div>
-            </div>
-          ))}
-        </HTMLFlipBook>
+            ) : (
+              <JournalPage
+                entry={entries[currentPage - 1]}
+                onEdit={() => handleEditEntry(entries[currentPage - 1])}
+                onDelete={() => handleDeleteEntry(entries[currentPage - 1].id)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Navigation Buttons */}
       <div className="flex justify-center items-center gap-5 mt-5">
         <button 
-          onClick={prevPage}
-          className="px-5 py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all"
+          onClick={() => flipToPage(currentPage - 1)}
+          disabled={currentPage === 0}
+          className="px-5 py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           Previous
         </button>
         <span className="text-sm text-gray-600 px-4">
-          {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+          Page {currentPage + 1} of {entries.length + 1}
         </span>
         <button 
-          onClick={nextPage}
-          className="px-5 py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all"
+          onClick={() => flipToPage(currentPage + 1)}
+          disabled={currentPage === entries.length}
+          className="px-5 py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           Next
         </button>
