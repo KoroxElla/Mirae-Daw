@@ -26,7 +26,7 @@ const ReminiscePage: React.FC = () => {
 
     try {
 
-      const res = await fetch("http://localhost:5000/journal/history?range=month")
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/journal/history?range=month`)
 
       if (!res.ok) {
         console.warn("History request failed")

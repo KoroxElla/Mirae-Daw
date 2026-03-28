@@ -47,7 +47,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
 
   // API Calls
   const fetchJournalSettings = async (): Promise<JournalSettings> => {
-    const response = await fetch('http://localhost:5000/journal/settings', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/settings`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -57,7 +57,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const fetchAllEntries = async (): Promise<JournalEntry[]> => {
-    const response = await fetch('http://localhost:5000/journal/me', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/me`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -67,7 +67,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const saveJournalEntry = async (text: string): Promise<any> => {
-    const response = await fetch('http://localhost:5000/journal/save', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/save`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const deleteJournalEntry = async (entryId: string): Promise<any> => {
-    const response = await fetch(`http://localhost:5000/journal/delete/${entryId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/delete/${entryId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -91,7 +91,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const updateJournalSettings = async (title: string, cover: string): Promise<void> => {
-    const response = await fetch('http://localhost:5000/journal/settings', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/settings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

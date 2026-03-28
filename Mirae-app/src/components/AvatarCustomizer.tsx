@@ -43,7 +43,7 @@ export default function AvatarCustomizer({
           await uploadBytes(storageRef, blob);
           const downloadURL = await getDownloadURL(storageRef);
 
-          const backendResponse = await fetch("http://localhost:5000/avatar/save", {
+          const backendResponse = await fetch(`${import.meta.env.VITE_API_URL}/avatar/save`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

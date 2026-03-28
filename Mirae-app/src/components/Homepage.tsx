@@ -51,7 +51,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
     try {
       localStorage.setItem("token", token);
 
-      const res = await fetch("http://localhost:5000/auth/register", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
