@@ -55,6 +55,10 @@ def save_entry(user_id, text, weights, arbitration):
         "weights": weights,
         "arbitration": arbitration,
         "primaryEmotion": primary_emotion,
+<<<<<<< HEAD
+=======
+        "emotionScore": weights.get(primary_emotion, 0)
+>>>>>>> 36a9f3824f595c788305ef6b99b71a1198038ec3
         "emotionCategory": category
 
     })
