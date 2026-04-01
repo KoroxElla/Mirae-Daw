@@ -1,4 +1,3 @@
-from transformers import pipeline
 import requests
 import os
 
@@ -15,16 +14,6 @@ headers = {
     "Authorization": f"Bearer {HF_API_KEY}"
 }
 
-
-# -------------------------------------------------
-# LOAD MODEL ONCE
-# -------------------------------------------------
-
-emotion_classifier = pipeline(
-    "text-classification",
-    model="j-hartmann/emotion-english-distilroberta-base",
-    top_k=None
-)
 
 # -------------------------------------------------
 # MAP EMOTIONS → ANIMATIONS
@@ -65,11 +54,11 @@ def analyze_text(text: str) -> dict:
     if isinstance(data, dict) and "error" in data:
       print("HF API error:", data["error"])
 
-    return {
-        "primary_emotion": "neutral",
-        "animation": "idle.fbx",
-        "weights": {"neutral": 1.0}
-    }
+       return {
+          "primary_emotion": "neutral",
+          "animation": "idle.fbx",
+          "weights": {"neutral": 1.0}
+       }
 
     # Normal successful response
     result = data[0]
@@ -78,15 +67,6 @@ def analyze_text(text: str) -> dict:
         item["label"]: item["score"]
         for item in result
     }
-
-    # find strongest emotion
-    primary_emotion = max(weights, key=weights.get)
-
-    results = emotion_classifier(text)[0]
-
-    weights = {}
-    for r in results:
-        weights[r["label"]] = r["score"]
 
     # find strongest emotion
     primary_emotion = max(weights, key=weights.get)
