@@ -3,8 +3,13 @@ from firebase_admin import credentials, firestore
 from datetime import datetime
 from services.crypto_service import encrypt_text
 from services.emotion_category import get_category
+import os
+import json
 
-cred = credentials.Certificate("config/firebase_key.json")
+firebase_json = os.getenv("FIREBASE_CREDENTIALS")
+cred_dict = json.loads(firebase_json)
+
+cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
