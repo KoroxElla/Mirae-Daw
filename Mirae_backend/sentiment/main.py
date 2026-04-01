@@ -54,10 +54,10 @@ def analyze_text(text: str) -> dict:
     if isinstance(data, dict) and "error" in data:
       print("HF API error:", data["error"])
 
-       return {
-          "primary_emotion": "neutral",
-          "animation": "idle.fbx",
-          "weights": {"neutral": 1.0}
+      return {
+        "primary_emotion": "neutral",
+        "animation": "idle.fbx",
+        "weights": {"neutral": 1.0}
        }
 
     # Normal successful response
