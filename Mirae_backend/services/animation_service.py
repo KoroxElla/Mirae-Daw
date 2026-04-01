@@ -37,23 +37,6 @@ def arbitrate_emotion(weights: dict):
             "animations": ["idle.fbx"]
         }
 
-    # -------------------------
-    # STEP 1 — Determine dominant class
-    # -------------------------
-
-    "trust": "trust.fbx",
-    "anticipation": "excited.fbx",
-    "positive": "celebrating.fbx",
-    "surprise": "reacting.fbx",
-
-    "anger": "angry.fbx",
-    "sadness": "sad.fbx",
-    "fear": "scared.fbx",
-    "disgust": "disappointed.fbx",
-    "negative": "depressed.fbx",
-
-    "neutral": "idle.fbx"
-
 
 DECAY_FACTOR = 0.6
 
