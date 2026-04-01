@@ -53,7 +53,7 @@ def arbitrate_emotion(weights: dict):
     "negative": "depressed.fbx",
 
     "neutral": "idle.fbx"
-}
+
 
 DECAY_FACTOR = 0.6
 
