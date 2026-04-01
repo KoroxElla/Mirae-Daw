@@ -1,18 +1,14 @@
 EMOTION_CLASSES = {
-<<<<<<< HEAD
     "positive": {"joy",  "surprise"},
     "negative": {"anger", "sadness", "fear", "disgust"},
-=======
     "positive": {"joy", "trust", "anticipation", "positive", "surprise"},
     "negative": {"anger", "sadness", "fear", "disgust", "negative"},
->>>>>>> 36a9f3824f595c788305ef6b99b71a1198038ec3
     "neutral": {"neutral"}
 }
 
 
 EMOTION_TO_ANIMATION = {
     "joy": "happy.fbx",
-<<<<<<< HEAD
     "surprise": "reacting.fbx",
     "anger": "angry.fbx",
     "sadness": "sad.fbx",
@@ -45,7 +41,6 @@ def arbitrate_emotion(weights: dict):
     # STEP 1 — Determine dominant class
     # -------------------------
 
-=======
     "trust": "trust.fbx",
     "anticipation": "excited.fbx",
     "positive": "celebrating.fbx",
@@ -84,7 +79,6 @@ def arbitrate_emotion(weights: dict):
     # STEP 1 — Determine dominant class
     # -------------------------
 
->>>>>>> 36a9f3824f595c788305ef6b99b71a1198038ec3
     class_totals = {
         "positive": 0,
         "negative": 0,

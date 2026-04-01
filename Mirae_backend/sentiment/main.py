@@ -1,5 +1,4 @@
 from transformers import pipeline
-<<<<<<< HEAD
 import requests
 import os
 
@@ -16,7 +15,6 @@ headers = {
     "Authorization": f"Bearer {HF_API_KEY}"
 }
 
-=======
 
 # -------------------------------------------------
 # LOAD MODEL ONCE
@@ -28,7 +26,6 @@ emotion_classifier = pipeline(
     top_k=None
 )
 
->>>>>>> 36a9f3824f595c788305ef6b99b71a1198038ec3
 # -------------------------------------------------
 # MAP EMOTIONS → ANIMATIONS
 # -------------------------------------------------
@@ -53,7 +50,6 @@ def analyze_text(text: str) -> dict:
     Returns emotion weights dictionary for avatar animation.
     """
 
-<<<<<<< HEAD
     payload = {
         "inputs": text
     }
@@ -86,7 +82,6 @@ def analyze_text(text: str) -> dict:
     # find strongest emotion
     primary_emotion = max(weights, key=weights.get)
 
-=======
     results = emotion_classifier(text)[0]
 
     weights = {}
@@ -96,7 +91,6 @@ def analyze_text(text: str) -> dict:
     # find strongest emotion
     primary_emotion = max(weights, key=weights.get)
 
->>>>>>> 36a9f3824f595c788305ef6b99b71a1198038ec3
     animation_file = EMOTION_TO_ANIMATION.get(
         primary_emotion,
         "idle.fbx"

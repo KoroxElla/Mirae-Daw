@@ -17,10 +17,7 @@ def create_app():
     app.register_blueprint(avatar_bp)
     app.register_blueprint(journal_bp)
     app.register_blueprint(reminisce_bp)
-<<<<<<< HEAD
     app.register_blueprint(insights_bp)
-=======
->>>>>>> 36a9f3824f595c788305ef6b99b71a1198038ec3
 
 
     
