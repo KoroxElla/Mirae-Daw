@@ -24,7 +24,7 @@ export default function App() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await fetch("http://localhost:5000/avatar/me", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/avatar/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
