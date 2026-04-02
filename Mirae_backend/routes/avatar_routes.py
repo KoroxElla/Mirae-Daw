@@ -20,8 +20,7 @@ def fetch_avatar(user_id):
 # POST /avatar/save
 @avatar_bp.route("/save", methods=["POST"])
 @require_auth
-def save_avatar_route():
-    user_id = request.user.get("uid")
+def save_avatar_route(user_id):
     data = request.get_json()
 
     avatar_url = data.get("avatarUrl")
