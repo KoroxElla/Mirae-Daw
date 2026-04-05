@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { useGLTF, Environment, Stage } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
 import { useAvatarEmotion } from './journal/useAvatarEmotion';
+import LoadingAnimation from './LoadingAnimation';
 
 interface AvatarProps {
   position?: [number, number, number]
@@ -10,6 +11,8 @@ interface AvatarProps {
   showBackground?: boolean 
   backgroundColor?: string
   scale?: number
+  emotionColor?: string;
+
 }
 
 export function Avatar({ 
@@ -17,11 +20,15 @@ export function Avatar({
   modelUrl, 
   showBackground = true, 
   backgroundColor = '#2a2a2a', 
+  emotionColor = '#FFC494',
   scale = 3.5 }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const currentAction = useRef<THREE.AnimationAction | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const [showLoading, setShowLoading] = useState(true);
+  const [loadingComplete, setLoadingComplete] = useState(false);
+  
 
   const { currentAnimation } = useAvatarEmotion({
     onAnimationChange: (animation) => {
@@ -39,6 +46,32 @@ export function Avatar({
 
   // Store the scene in a ref to prevent recreation
   const sceneRef = useRef<THREE.Group | null>(null)
+
+  useEffect(() => {
+    if (sceneRef.current && mixerRef.current) {
+      // Short timeout to ensure everything is ready
+      const timer = setTimeout(() => {
+        setShowLoading(false);
+        setLoadingComplete(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [sceneRef.current, mixerRef.current]);
+
+  // Then modify the return to show loading animation
+  if (!sceneRef.current || showLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <LoadingAnimation 
+          onComplete={() => {
+            setShowLoading(false);
+            setLoadingComplete(true);
+          }}
+          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
+        />
+      </div>
+    );
+  }
 
   // Configure model once when it loads
   useEffect(() => {
@@ -299,7 +332,7 @@ export function Avatar({
             <planeGeometry args={[2, 2]} />
             <shaderMaterial
               uniforms={{
-                color1: { value: new THREE.Color(backgroundColor) },
+                color1: { value: new THREE.Color(emotionColor) },
                 color2: { value: new THREE.Color('#1a1a1a') },
               }}
               vertexShader={`

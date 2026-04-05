@@ -1,18 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAvatar } from '../../contexts/AvatarContext';
 
+// Animation mapping (FBX files from public/animations/)
 const EMOTION_TO_ANIMATION: Record<string, string> = {
-  "joy": "happy.fbx",
-  "trust": "trust.fbx",
-  "anticipation": "excited.fbx",
-  "positive": "celebrating.fbx",
-  "surprise": "reacting.fbx",
   "anger": "angry.fbx",
-  "sadness": "sad.fbx",
-  "fear": "scared.fbx",
   "disgust": "disappointed.fbx",
-  "negative": "depressed.fbx",
-  "neutral": "idle.fbx"
+  "fear": "scared.fbx",
+  "joy": "happy.fbx",
+  "neutral": "idle.fbx",
+  "sadness": "sad.fbx",
+  "surprise": "reacting.fbx"
+};
+
+// Scene mapping (GLB files from public/scenes/)
+const EMOTION_TO_SCENE: Record<string, string> = {
+  "anger": "/scenes/anger_scene.glb",
+  "disgust": "/scenes/disgust_scene.glb",
+  "fear": "/scenes/fear_scene.glb",
+  "joy": "/scenes/joy_scene.glb",
+  "neutral": "/scenes/neutral_scene.glb",
+  "sadness": "/scenes/sadness_scene.glb",
+  "surprise": "/scenes/surprise_scene.glb"
+};
+
+// Fallback colors if GLB scenes fail to load
+export const EMOTION_COLORS: Record<string, string> = {
+  "anger": "#FF4444",      // Red - anger
+  "disgust": "#8B4513",    // Brown - disgust
+  "fear": "#663399",       // Purple - fear
+  "joy": "#FFD700",        // Gold - joy
+  "neutral": "#FFC494",    // Peach - neutral
+  "sadness": "#4A90D9",    // Blue - sadness
+  "surprise": "#FF6B35"    // Orange - surprise
 };
 
 interface AnimationState {
@@ -22,18 +41,21 @@ interface AnimationState {
 
 interface UseAvatarEmotionProps {
   onAnimationChange?: (animation: string) => void;
+  onSceneChange?: (scene: string) => void;
 }
 
-export function useAvatarEmotion({ onAnimationChange }: UseAvatarEmotionProps = {}) {
+export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatarEmotionProps = {}) {
   const [currentState, setCurrentState] = useState<AnimationState>({
     mode: 'single',
     emotions: ['neutral']
   });
   
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle.fbx');
+  const [currentScene, setCurrentScene] = useState<string>('/scenes/neutral_scene.glb');
+  const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
+  
   const loopIndexRef = useRef(0);
   const loopTimerRef = useRef<NodeJS.Timeout>();
-
 
   // Fetch initial avatar state from backend
   const fetchAvatarState = async () => {
@@ -41,7 +63,7 @@ export function useAvatarEmotion({ onAnimationChange }: UseAvatarEmotionProps = 
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5000/journal/me', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -49,11 +71,10 @@ export function useAvatarEmotion({ onAnimationChange }: UseAvatarEmotionProps = 
 
       if (response.ok) {
         const entries = await response.json();
-        // Get the most recent entry's emotion state
         if (entries && entries.length > 0) {
           const latestEntry = entries[entries.length - 1];
           if (latestEntry.arbitration) {
-            console.log('📥 Fetched latest avatar state from backend:', latestEntry.arbitration);
+            console.log('📥 Fetched latest avatar state:', latestEntry.arbitration);
             setCurrentState({
               mode: latestEntry.arbitration.mode as 'single' | 'loop',
               emotions: latestEntry.arbitration.emotions
@@ -84,42 +105,58 @@ export function useAvatarEmotion({ onAnimationChange }: UseAvatarEmotionProps = 
 
   // Handle loop mode animation cycling
   useEffect(() => {
-    // Clear any existing timer
     if (loopTimerRef.current) {
       clearTimeout(loopTimerRef.current);
     }
 
-    // Reset loop index
     loopIndexRef.current = 0;
 
     if (currentState.mode === 'single') {
-      // Single mode: just play the first animation
       const emotion = currentState.emotions[0] || 'neutral';
       const animation = EMOTION_TO_ANIMATION[emotion] || 'idle.fbx';
+      const scene = EMOTION_TO_SCENE[emotion] || '/scenes/neutral_scene.glb';
+      
       setCurrentAnimation(animation);
+      setCurrentScene(scene);
+      setCurrentEmotion(emotion);
       onAnimationChange?.(animation);
-      console.log('🎬 Playing single animation:', animation, 'from emotion:', emotion);
-    } else {
-      // Loop mode: cycle through animations every 5 seconds
-      const animations = currentState.emotions
-	.map(emotion => EMOTION_TO_ANIMATION[emotion] || 'idle.fbx')
-        if (animations.length === 0){
-          // Fallback to idle if no valid animations
-          setCurrentAnimation('idle.fbx');
-          onAnimationChange?.('idle.fbx');
-          return;
-        };
+      onSceneChange?.(scene);
+      
+      console.log('🎬 Single mode - Animation:', animation, 'Scene:', scene, 'Emotion:', emotion);
+    } 
+    else {
+      // Loop mode: cycle through emotions every 5 seconds
+      const validEmotions = currentState.emotions.filter(e => EMOTION_TO_ANIMATION[e]);
+      
+      if (validEmotions.length === 0) {
+        setCurrentAnimation('idle.fbx');
+        setCurrentScene('/scenes/neutral_scene.glb');
+        setCurrentEmotion('neutral');
+        onAnimationChange?.('idle.fbx');
+        onSceneChange?.('/scenes/neutral_scene.glb');
+        return;
+      }
 
-        const cycleAnimation = () => {
-          const animation = animations[loopIndexRef.current % animations.length];
-          setCurrentAnimation(animation);
-          onAnimationChange?.(animation);
+      const cycleAnimation = () => {
+        const emotion = validEmotions[loopIndexRef.current % validEmotions.length];
+        const animation = EMOTION_TO_ANIMATION[emotion];
+        const scene = EMOTION_TO_SCENE[emotion];
         
-        console.log(`🔄 Loop mode: ${animation} (from emotions: ${currentState.emotions.join(', ')})`);
+        setCurrentAnimation(animation);
+        setCurrentScene(scene);
+        setCurrentEmotion(emotion);
+        onAnimationChange?.(animation);
+        onSceneChange?.(scene);
+        
+        console.log(`🔄 Loop mode [${loopIndexRef.current % validEmotions.length + 1}/${validEmotions.length}]:`, {
+          emotion,
+          animation,
+          scene
+        });
 
         loopIndexRef.current++;
         loopTimerRef.current = setTimeout(cycleAnimation, 5000);
-    };
+      };
 
       cycleAnimation();
     }
@@ -129,13 +166,14 @@ export function useAvatarEmotion({ onAnimationChange }: UseAvatarEmotionProps = 
         clearTimeout(loopTimerRef.current);
       }
     };
-  }, [currentState, onAnimationChange]);
+  }, [currentState, onAnimationChange, onSceneChange]);
 
   return {
     currentAnimation,
+    currentScene,
+    currentEmotion,
     currentState,
     updateFromBackend,
     fetchAvatarState
-
   };
 }

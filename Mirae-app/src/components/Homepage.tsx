@@ -19,6 +19,8 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   const auth = getAuth();
   const user = auth.currentUser;
@@ -105,7 +107,19 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
       );
 
       const token = await userCred.user.getIdToken();
-      await sendTokenToBackend(token);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          displayName: displayName || "",
+          role: selectedRole, // Add this
+        }),
+      });
+    
+      if (!res.ok) throw new Error('Registration failed');
 
       onAuthSuccess();
     } catch (error) {
@@ -197,6 +211,22 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
               <>
                 <h2 className="text-xl font-bold mb-4">Login</h2>
 
+                <div className="flex gap-2 mb-4">
+                {(['user', 'agent', 'admin'] as const).map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => setSelectedRole(role)}
+                    className={`flex-1 py-2 rounded-lg capitalize ${
+                      selectedRole === role
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+
                 <input
                   type="email"
                   placeholder="Email"
@@ -205,13 +235,22 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
                   onChange={(e) => setEmail(e.target.value)}
                 />
 
-                <input
-                  type="password"
-                  placeholder="Password"
-                  className="w-full border p-2 mb-4 rounded"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative mb-4">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    className="w-full border p-2 rounded pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
 
                 <button
                   onClick={handleLogin}
@@ -241,6 +280,22 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
               <>
                 <h2 className="text-xl font-bold mb-4">Sign Up</h2>
 
+                <div className="flex gap-2 mb-4">
+                  {(['user', 'agent', 'admin'] as const).map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setSelectedRole(role)}
+                      className={`flex-1 py-2 rounded-lg capitalize ${
+                        selectedRole === role
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+
                 <input
                   type="text"
                   placeholder="Display Name"
@@ -257,13 +312,22 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
                   onChange={(e) => setEmail(e.target.value)}
                 />
 
-                <input
-                  type="password"
-                  placeholder="Password"
-                  className="w-full border p-2 mb-4 rounded"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative mb-4">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    className="w-full border p-2 rounded pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
 
                 <button
                   onClick={handleSignup}

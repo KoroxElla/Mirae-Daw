@@ -5,6 +5,9 @@ import { Canvas } from "@react-three/fiber";
 import JournalBook from "./journal/JournalBook";
 import ReminiscePage from "./ReminiscePage";
 import { useAvatarEmotion } from "./journal/useAvatarEmotion"; 
+import ProfilePage from './ProfilePage';
+import BackgroundMusic from './BackgroundMusic';
+import { useAvatarEmotion, EMOTION_COLORS } from './journal/useAvatarEmotion';
 
 interface MainPageProps {
   avatarData: any;
@@ -23,6 +26,7 @@ export default function MainPage({
   onLogout,
 }: MainPageProps) {
 
+  const [showProfile, setShowProfile] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "avatar" | "journal" | "reminisce" | "chat"
   >("avatar");
@@ -32,6 +36,24 @@ export default function MainPage({
   
   // Get user ID from token
   const [userId, setUserId] = useState<string | null>(null);
+
+  const [currentSceneUrl, setCurrentSceneUrl] = useState<string>("/scenes/neutral_scene.glb");
+  const [currentEmotion, setCurrentEmotion] = useState<string>("neutral");
+
+  const { 
+    currentAnimation, 
+    currentScene, 
+    currentEmotion: hookEmotion,
+    updateFromBackend 
+  } = useAvatarEmotion({
+    onAnimationChange: (anim) => setAvatarAnimation(anim),
+    onSceneChange: (scene) => setCurrentSceneUrl(scene)
+  });
+
+  // Updates currentEmotion
+  useEffect(() => {
+    setCurrentEmotion(hookEmotion);
+  }, [hookEmotion]);
 
   // Decode user ID from token on mount
   useEffect(() => {
@@ -73,8 +95,13 @@ export default function MainPage({
       case "avatar":
         return (
           <div className="flex flex-col items-center">
-            <div style={{ width: 800, height: 600 }}>
-              <Canvas camera={{ position: [0, 0.5, 4], fov: 40 }}>
+            <div className="w-full h-full relative" style={{ minHeight: '400px', height: '70vh', maxHeight: '800px' }}>
+              <Canvas camera={{ position: [0, 0.5, 4], fov: 40 }}
+                      style={{ width: '100%', height: '100%' }}
+                      resize={{ scroll: true, debounce: { scroll: 50, resize: 0 } }}>
+                {currentSceneUrl && (
+                  <Environment files={currentSceneUrl} background />
+                )}
                 <OrbitControls 
                   enableZoom={true}
                   enablePan={false}
@@ -82,8 +109,10 @@ export default function MainPage({
                   minDistance={2}
                   maxDistance={6}
                 />
-                <ambientLight />
+                <ambientLight intensity={0.5} />
                 <directionalLight position={[2, 2, 2]} />
+                <directionalLight position={[-2, 2, 2]} intensity={0.5} />
+                <pointLight position={[0, 3, 0]} intensity={0.3} />
 
                 {avatarData?.avatarUrl && (
                   <Avatar 
@@ -91,7 +120,7 @@ export default function MainPage({
                     animation={avatarAnimation} // Use the dynamic animation
                     scale={1.5} 
                     showBackground={true}
-                    backgroundColor="#FFC494"
+                    backgroundColor={EMOTION_COLORS[currentEmotion] || '#FFC494'}
                   />
                 )}
               </Canvas>
@@ -133,13 +162,15 @@ export default function MainPage({
         <div className="flex gap-3 items-center">
           <img
             src="/main_icons/profile.png"
-            className="w-6 h-6 cursor-pointer"
+            className="w-6 h-6 cursor-pointer hover:scale-110 transition-transform"
             alt="profile"
+            onClick={() => setShowProfile(true)}
           />
           <img
             src="/main_icons/Settings.png"
-            className="w-6 h-6 cursor-pointer"
+            className="w-6 h-6 cursor-pointer hover:scale-110 transition-transform"
             alt="settings"
+            onClick={() => setShowProfile(true)}
           />
           <button
             onClick={onLogout}
@@ -148,6 +179,13 @@ export default function MainPage({
             Logout
           </button>
         </div>
+        {showProfile && (
+          <ProfilePage 
+             userId={userId || ''}
+             onClose={() => setShowProfile(false)}
+          />
+        )}
+
       </div>
 
       {/* Main Content */}
@@ -196,6 +234,7 @@ export default function MainPage({
             alt="chat"
           />
         </button>
+        <BackgroundMusic />
       </div>
     </div>
   );
