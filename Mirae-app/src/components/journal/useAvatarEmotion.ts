@@ -14,13 +14,13 @@ const EMOTION_TO_ANIMATION: Record<string, string> = {
 
 // Scene mapping (GLB files from public/scenes/)
 const EMOTION_TO_SCENE: Record<string, string> = {
-  "anger": "/scenes/anger_scene.glb",
-  "disgust": "/scenes/disgust_scene.glb",
-  "fear": "/scenes/fear_scene.glb",
-  "joy": "/scenes/joy_scene.glb",
-  "neutral": "/scenes/neutral_scene.glb",
-  "sadness": "/scenes/sadness_scene.glb",
-  "surprise": "/scenes/surprise_scene.glb"
+  "anger": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fangry_scene.glb?alt=media",
+  "disgust": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fdisgust_scene.glb?alt=media",
+  "fear": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Ffear_scene.glb?alt=media",
+  "joy": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fjoy_scene.glb?alt=media",
+  "neutral": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fneutral_scene.glb?alt=media",
+  "sadness": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fsadness_scene.glb?alt=media",
+  "surprise": "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fsurprise_scene.glb?alt=media"
 };
 
 // Fallback colors if GLB scenes fail to load
