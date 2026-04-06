@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 import logging
 from services.auth_service import verify_token
-from services.firebase_service import create_user
+from services.firebase_service import create_user, get_user_role  # Add get_user_role import
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -13,6 +13,7 @@ auth_bp = Blueprint("auth", __name__)
 def register():
     """
     Register a new user in Firestore after Firebase Auth creation
+    Now supports role parameter
     """
     logger.info("🔐 /auth/register endpoint called")
     
@@ -69,28 +70,40 @@ def register():
                 "message": "Token does not contain user ID"
             }), 401
         
-        # 4. Create user in Firestore
+        # 4. Get role from request body (default to "user")
+        role = "user"  # Default role
+        display_name = ""
+        
+        if request.is_json:
+            data = request.get_json() or {}
+            role = data.get("role", "user")
+            display_name = data.get("displayName", "")
+            
+            # Validate role
+            if role not in ["user", "admin"]:
+                logger.warning(f"Invalid role '{role}', defaulting to 'user'")
+                role = "user"
+        
+        logger.info(f"📝 Creating user with role: {role}, displayName: {display_name}")
+        
+        # 5. Create user in Firestore with role
         try:
-            logger.info(f"📝 Creating Firestore user: {uid} ({email})")
-            
-            # Get optional display name from request body if provided
-            display_name = ""
-            if request.is_json:
-                data = request.get_json() or {}
-                display_name = data.get("display_name", "")
-            
-            create_user(uid, email, display_name)
-            logger.info(f"✅ User {uid} created in Firestore")
+            logger.info(f"📝 Creating Firestore user: {uid} ({email}) with role {role}")
+            create_user(uid, email, display_name, role)  # Now passing role parameter
+            logger.info(f"✅ User {uid} created in Firestore with role {role}")
             
         except Exception as firestore_error:
             logger.error(f"❌ Firestore creation failed: {str(firestore_error)}")
             
             # Check if user already exists
             if "already exists" in str(firestore_error).lower():
+                # Get existing user's role
+                existing_role = get_user_role(uid)
                 return jsonify({
                     "status": "already_exists",
                     "uid": uid,
                     "email": email,
+                    "role": existing_role,
                     "message": "User already registered in Firestore"
                 }), 200
             else:
@@ -99,15 +112,16 @@ def register():
                     "message": str(firestore_error)
                 }), 500
         
-        # 5. Return success
+        # 6. Return success with role info
         response_data = {
             "status": "created",
             "uid": uid,
             "email": email,
-            "message": "User registered successfully"
+            "role": role,
+            "message": f"User registered successfully as {role}"
         }
         
-        logger.info(f"🎉 Registration successful for {email}")
+        logger.info(f"🎉 Registration successful for {email} as {role}")
         return jsonify(response_data), 201
         
     except Exception as e:
@@ -117,7 +131,30 @@ def register():
             "message": "An unexpected error occurred"
         }), 500
 
-# ==================== ADD THESE NEW ENDPOINTS ====================
+
+@auth_bp.route("/user/role", methods=["GET"])
+def get_role():
+    """Get current user's role"""
+    try:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Authentication required"}), 401
+        
+        token = auth_header[7:]
+        decoded = verify_token(token)
+        uid = decoded.get("uid")
+        
+        role = get_user_role(uid)
+        
+        return jsonify({
+            "uid": uid,
+            "role": role
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting user role: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 
 @auth_bp.route("/health", methods=["GET"])
 def health():
@@ -125,12 +162,14 @@ def health():
     return jsonify({
         "status": "healthy",
         "service": "authentication",
-        "timestamp": "now",  # You can import datetime and use datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat() if 'datetime' in dir() else "now",
         "endpoints": {
             "register": "/auth/register [POST]",
+            "user/role": "/auth/user/role [GET]",
             "health": "/health [GET]"
         }
     }), 200
+
 
 @auth_bp.route("/", methods=["GET"])
 def index():
@@ -142,6 +181,7 @@ def index():
         "endpoints": {
             "auth": {
                 "register": "/auth/register",
+                "user/role": "/auth/user/role",
                 "health": "/health"
             }
         }

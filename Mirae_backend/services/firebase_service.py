@@ -6,22 +6,35 @@ from services.emotion_category import get_category
 import os
 import json
 
-firebase_json = os.getenv("FIREBASE_CREDENTIALS")
-cred_dict = json.loads(firebase_json)
-cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+# DIRECT FILE LOAD - Skip environment variable
+config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'firebase_key.json')
 
-cred = credentials.Certificate(cred_dict)
-firebase_admin.initialize_app(cred)
+try:
+    with open(config_path, 'r') as f:
+        cred_dict = json.load(f)
+    
+    # Ensure private key has proper newlines
+    if 'private_key' in cred_dict:
+        cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
+    
+    cred = credentials.Certificate(cred_dict)
+    firebase_admin.initialize_app(cred)
+    print("✅ Firebase initialized with config file")
+    
+except Exception as e:
+    print(f"❌ Error loading Firebase config: {e}")
+    raise
 
 db = firestore.client()
 
 #Implementing Users
 
-def create_user(user_id, email, password_hash=None, display_name=""):
+def create_user(user_id, email, password_hash=None, display_name="", role="user"):
     user_data = {
         "email": email,
         "displayName": display_name,
         "createdAt": datetime.utcnow(),
+        "role": role,
 
         "settings": {
             "notifications": True,
@@ -43,6 +56,69 @@ def create_user(user_id, email, password_hash=None, display_name=""):
         user_data["passwordHash"] = password_hash
 
     db.collection("users").document(user_id).set(user_data)
+
+def create_user_with_role(user_id, email, password_hash=None, display_name="", role="user"):
+    user_data = {
+        "email": email,
+        "displayName": display_name,
+        "createdAt": datetime.utcnow(),
+        "role": role,
+        "settings": {
+            "notifications": True,
+            "textToSpeech": False,
+            "highContrast": False,
+            "largeText": False,
+            "privacyLevel": "private"
+        },
+        "preferences": {
+            "journalRemindersEnabled": False,
+            "reminderTime": "",
+            "preferredPrompts": [],
+            "comfortLevel": "medium"
+        }
+    }
+
+    if password_hash:
+        user_data["passwordHash"] = password_hash
+
+    db.collection("users").document(user_id).set(user_data)
+
+
+# Adding default roles to existing users
+def migrate_existing_users_to_default_role():
+    """Run this once to add 'user' role to all existing users without a role"""
+    users_ref = db.collection("users")
+    users = users_ref.stream()
+    
+    updated_count = 0
+    for user in users:
+        user_data = user.to_dict()
+        if "role" not in user_data:
+            users_ref.document(user.id).update({
+                "role": "user"
+            })
+            updated_count += 1
+    
+    print(f"✅ Updated {updated_count} existing users with default 'user' role")
+    return updated_count
+
+#Retrieving user role
+def get_user_role(user_id):
+    """Get user's role"""
+    doc = db.collection("users").document(user_id).get()
+    if doc.exists:
+        return doc.to_dict().get("role", "user")
+    return "user"
+
+
+# Updating user role
+def update_user_role(user_id, new_role):
+    """Update user's role (admin only)"""
+    db.collection("users").document(user_id).update({
+        "role": new_role,
+        "updatedAt": datetime.utcnow()
+    })
+
 
 #Implementing the Journal entry
 def save_entry(user_id, text, weights, arbitration):
