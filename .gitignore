@@ -7,3 +7,8 @@ build/
 *.log
 mirae-electron/
 mirae-electron/node_modules/
+*.glb
+*.vrm
+*.mp3
+*.zip
+
