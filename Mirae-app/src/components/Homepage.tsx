@@ -21,6 +21,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<"user" | "agent" | "admin">("user");
   
   const auth = getAuth();
   const user = auth.currentUser;
