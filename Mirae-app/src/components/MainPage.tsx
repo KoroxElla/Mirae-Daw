@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useGLTF, OrbitControls } from "@react-three/drei";
 import { Avatar } from "./Avatar";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -15,11 +15,12 @@ interface MainPageProps {
   onLogout: () => void;
 }
 
-// Component to load and display GLB scene background with better error handling
-function SceneBackground({ url, emotion, onLoad, onError }: { url: string; emotion: string; onLoad?: () => void; onError?: () => void; }) {
+// Optimized SceneBackground component with memoization
+const SceneBackground = React.memo(({ url, emotion, onLoad, onError }: { url: string; emotion: string; onLoad?: () => void; onError?: () => void; }) => {
   const { scene, error } = useGLTF(url);
   const sceneRef = useRef<THREE.Group>();
   const { gl } = useThree();
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     if (error) {
@@ -28,14 +29,11 @@ function SceneBackground({ url, emotion, onLoad, onError }: { url: string; emoti
       return;
     }
 
-    if (scene) {
+    if (scene && !loadedRef.current) {
+      loadedRef.current = true;
       try {
-        // Clone the scene to avoid conflicts
-        const clonedScene = scene.clone();
-        sceneRef.current = clonedScene;
-        
-        // Configure the scene
-        clonedScene.traverse((child) => {
+        // Use the scene directly without cloning to save memory
+        scene.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
             mesh.castShadow = true;
@@ -46,63 +44,45 @@ function SceneBackground({ url, emotion, onLoad, onError }: { url: string; emoti
               if (Array.isArray(mesh.material)) {
                 mesh.material.forEach(mat => {
                   mat.side = THREE.DoubleSide;
-                  mat.needsUpdate = true;
                 });
               } else {
                 mesh.material.side = THREE.DoubleSide;
-                mesh.material.needsUpdate = true;
               }
             }
           }
         });
         
-        // Scale and position the scene appropriately
-        clonedScene.scale.set(1, 1, 1);
-        clonedScene.position.set(0, 0, 0);
-        clonedScene.rotation.y = 0;
-        
-        // Force a render update
-        gl.renderLists.dispose();
-        
-        // Small delay to ensure everything is ready
-        setTimeout(() => {
-          onLoad?.();
-        }, 100);
+        sceneRef.current = scene;
+        onLoad?.();
         
       } catch (err) {
         console.error("Error processing scene:", err);
         onError?.();
       }
     }
-    
-    return () => {
-      // Cleanup
-      if (sceneRef.current) {
-        sceneRef.current.clear();
-      }
-    };
-  }, [scene, error, gl, onLoad, onError]);
+  }, [scene, error, onLoad, onError]);
 
   if (error || !scene) return null;
-  return <primitive object={sceneRef.current || scene} />;
-}
+  return <primitive object={scene} />;
+});
 
-// Component to center the avatar
-function CenteredAvatar({ modelUrl, animation, emotionColor, onLoad }: { modelUrl: string; animation: string; emotionColor: string; onLoad?: () => void; }) {
+// Optimized CenteredAvatar component
+const CenteredAvatar = React.memo(({ modelUrl, animation, emotionColor, onLoad }: { modelUrl: string; animation: string; emotionColor: string; onLoad?: () => void; }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const loadedRef = useRef(false);
 
   useFrame(() => {
     if (groupRef.current) {
-      // Keep avatar centered and facing camera
       groupRef.current.position.set(0, -1.2, 0);
     }
   });
 
-  const handleAvatarLoad = () => {
-    setAvatarLoaded(true);
-    onLoad?.();
-  };
+  const handleLoad = useCallback(() => {
+    if (!loadedRef.current) {
+      loadedRef.current = true;
+      onLoad?.();
+    }
+  }, [onLoad]);
 
   return (
     <group ref={groupRef}>
@@ -112,20 +92,21 @@ function CenteredAvatar({ modelUrl, animation, emotionColor, onLoad }: { modelUr
         scale={1.5}
         showBackground={false}
         backgroundColor={emotionColor}
-        onLoad={handleAvatarLoad}
+        onLoad={handleLoad}
       />
     </group>
   );
-}
+});
 
-// Separate Canvas wrapper component to handle re-renders better
+// Main Canvas component with proper cleanup
 function AvatarScene({ 
   currentSceneUrl, 
   currentEmotion, 
   avatarData, 
   avatarAnimation, 
   onSceneLoaded, 
-  onAvatarLoaded 
+  onAvatarLoaded,
+  isVisible
 }: { 
   currentSceneUrl: string; 
   currentEmotion: string; 
@@ -133,29 +114,56 @@ function AvatarScene({
   avatarAnimation: string; 
   onSceneLoaded: () => void;
   onAvatarLoaded: () => void;
+  isVisible: boolean;
 }) {
   const [sceneReady, setSceneReady] = useState(false);
-  const [sceneError, setSceneError] = useState(false);
-  const cameraRef = useRef();
+  const [avatarReady, setAvatarReady] = useState(false);
+  const sceneLoadedRef = useRef(false);
+  const avatarLoadedRef = useRef(false);
+  const renderCountRef = useRef(0);
 
-  const handleSceneLoad = () => {
-    setSceneReady(true);
-    onSceneLoaded();
-  };
+  // Prevent multiple load calls
+  const handleSceneLoad = useCallback(() => {
+    if (!sceneLoadedRef.current) {
+      sceneLoadedRef.current = true;
+      setSceneReady(true);
+      onSceneLoaded();
+    }
+  }, [onSceneLoaded]);
 
-  const handleSceneError = () => {
-    console.error("Scene failed to load, using fallback");
-    setSceneError(true);
-    // Still mark as loaded to show avatar
-    setSceneReady(true);
-    onSceneLoaded();
-  };
+  const handleSceneError = useCallback(() => {
+    console.error("Scene failed to load");
+    if (!sceneLoadedRef.current) {
+      sceneLoadedRef.current = true;
+      setSceneReady(true);
+      onSceneLoaded();
+    }
+  }, [onSceneLoaded]);
 
-  // Reset scene ready state when URL changes
+  const handleAvatarLoad = useCallback(() => {
+    if (!avatarLoadedRef.current) {
+      avatarLoadedRef.current = true;
+      setAvatarReady(true);
+      onAvatarLoaded();
+    }
+  }, [onAvatarLoaded]);
+
+  // Reset refs when URL changes
   useEffect(() => {
+    sceneLoadedRef.current = false;
+    avatarLoadedRef.current = false;
     setSceneReady(false);
-    setSceneError(false);
+    setAvatarReady(false);
+    
+    // Log only once per URL change
+    renderCountRef.current++;
+    if (renderCountRef.current <= 2) {
+      console.log("Loading scene:", currentSceneUrl);
+    }
   }, [currentSceneUrl]);
+
+  // Don't render if not visible
+  if (!isVisible) return null;
 
   return (
     <Canvas
@@ -174,29 +182,19 @@ function AvatarScene({
       onCreated={({ gl, scene }) => {
         gl.setClearColor(new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494'));
         scene.background = new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494');
-  
- 
-        const canvas = gl.domElement;
-        canvas.addEventListener('webglcontextlost', (event) => {
-          event.preventDefault();
-          console.error('WebGL context lost');
-          setTimeout(() => {
-            setRenderKey(prev => prev + 1); // Force remount
-          }, 100);
-        });
       }}
     >
-      {/* Lighting for the scene */}
+      {/* Lighting */}
       <ambientLight intensity={1.2} />
       <directionalLight position={[5, 5, 5]} intensity={1} castShadow />
       <directionalLight position={[-5, 5, 5]} intensity={0.5} />
       <pointLight position={[0, 3, 2]} intensity={0.5} />
       <hemisphereLight intensity={0.3} />
       
-      {/* Scene Background - only render if no error */}
-      {currentSceneUrl && !sceneError && (
+      {/* Scene Background */}
+      {currentSceneUrl && (
         <SceneBackground 
-          key={currentSceneUrl} 
+          key={currentSceneUrl}
           url={currentSceneUrl} 
           emotion={currentEmotion} 
           onLoad={handleSceneLoad}
@@ -204,25 +202,17 @@ function AvatarScene({
         />
       )}
       
-      {/* Fallback background color if scene fails */}
-      {sceneError && (
-        <mesh position={[0, 0, -5]}>
-          <planeGeometry args={[20, 20]} />
-          <meshBasicMaterial color={EMOTION_COLORS[currentEmotion] || '#FFC494'} />
-        </mesh>
-      )}
-      
-      {/* Avatar - show when scene is ready OR immediately if we have fallback */}
-      {(sceneReady || sceneError) && avatarData?.avatarUrl && (
+      {/* Avatar */}
+      {sceneReady && avatarData?.avatarUrl && (
         <CenteredAvatar 
           modelUrl={avatarData.avatarUrl}
           animation={avatarAnimation}
           emotionColor={EMOTION_COLORS[currentEmotion] || '#FFC494'}
-          onLoad={onAvatarLoaded}
+          onLoad={handleAvatarLoad}
         />
       )}
       
-      {/* Controls - allow zoom but keep centered */}
+      {/* Controls */}
       <OrbitControls 
         enableZoom={true}
         enablePan={false}
@@ -244,31 +234,58 @@ export default function MainPage({
 
   const [showProfile, setShowProfile] = useState(false);
   const [activeTab, setActiveTab] = useState<"avatar" | "journal" | "reminisce" | "chat">("avatar");
-  const [avatarAnimation, setAvatarAnimation] = useState<string>("neutral");
+  const [avatarAnimation, setAvatarAnimation] = useState<string>("idle");
   const [userId, setUserId] = useState<string | null>(null);
   const [currentSceneUrl, setCurrentSceneUrl] = useState<string>("");
   const [currentEmotion, setCurrentEmotion] = useState<string>("neutral");
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
-  const [renderKey, setRenderKey] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Use ref to track if we've already set initial scene
+  const initialSceneSetRef = useRef(false);
+  const animationRef = useRef(avatarAnimation);
 
   const { 
     currentAnimation, 
     currentScene, 
     currentEmotion: hookEmotion,
   } = useAvatarEmotion({
-    onAnimationChange: (anim) => setAvatarAnimation(anim),
+    onAnimationChange: (anim) => {
+      console.log("Animation changed to:", anim);
+      setAvatarAnimation(anim);
+    },
     onSceneChange: (scene) => {
-      setCurrentSceneUrl(scene);
-      setSceneLoaded(false);
-      setAvatarLoaded(false);
-      // Force canvas remount on scene change
-      setRenderKey(prev => prev + 1);
+      // Only update scene if it's different from current
+      if (scene !== currentSceneUrl) {
+        console.log("Scene changed to:", scene);
+        setCurrentSceneUrl(scene);
+        setSceneLoaded(false);
+        setAvatarLoaded(false);
+      }
     }
   });
 
+  // Update animation ref
   useEffect(() => {
-    setCurrentEmotion(hookEmotion);
+    animationRef.current = avatarAnimation;
+  }, [avatarAnimation]);
+
+  // Set initial scene only once
+  useEffect(() => {
+    if (currentScene && !initialSceneSetRef.current) {
+      initialSceneSetRef.current = true;
+      setCurrentSceneUrl(currentScene);
+      setCurrentEmotion(hookEmotion);
+      setIsInitialized(true);
+    }
+  }, [currentScene, hookEmotion]);
+
+  // Update emotion when it changes
+  useEffect(() => {
+    if (hookEmotion) {
+      setCurrentEmotion(hookEmotion);
+    }
   }, [hookEmotion]);
 
   // Decode user ID from token
@@ -288,7 +305,8 @@ export default function MainPage({
 
   // Reset loading states when tab changes
   useEffect(() => {
-    if (activeTab === "avatar") {
+    if (activeTab !== "avatar") {
+      // Clean up when leaving avatar tab
       setSceneLoaded(false);
       setAvatarLoaded(false);
     }
@@ -318,16 +336,17 @@ export default function MainPage({
                 </div>
               )}
               
-              {/* Use key to force remount when scene changes */}
-              <AvatarScene
-                key={renderKey}
-                currentSceneUrl={currentSceneUrl}
-                currentEmotion={currentEmotion}
-                avatarData={avatarData}
-                avatarAnimation={avatarAnimation}
-                onSceneLoaded={() => setSceneLoaded(true)}
-                onAvatarLoaded={() => setAvatarLoaded(true)}
-              />
+              {isInitialized && (
+                <AvatarScene
+                  currentSceneUrl={currentSceneUrl}
+                  currentEmotion={currentEmotion}
+                  avatarData={avatarData}
+                  avatarAnimation={avatarAnimation}
+                  onSceneLoaded={() => setSceneLoaded(true)}
+                  onAvatarLoaded={() => setAvatarLoaded(true)}
+                  isVisible={activeTab === "avatar"}
+                />
+              )}
             </div>
 
             <button
@@ -402,18 +421,18 @@ export default function MainPage({
   );
 }
 
-// Preload scenes for better performance
-const sceneUrls = [
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fangry_scene.glb?alt=media",
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fdisgust_scene.glb?alt=media",
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Ffear_scene.glb?alt=media",
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fjoy_scene.glb?alt=media",
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fneutral_scene.glb?alt=media",
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fsadness_scene.glb?alt=media",
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fsurprise_scene.glb?alt=media"
-];
-
-// Preload all scenes
-sceneUrls.forEach(url => {
-  useGLTF.preload(url);
-});
+// Preload scenes with a delay to not block initial render
+setTimeout(() => {
+  const sceneUrls = [
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fangry_scene.glb?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fdisgust_scene.glb?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Ffear_scene.glb?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fjoy_scene.glb?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fneutral_scene.glb?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fsadness_scene.glb?alt=media",
+    "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fsurprise_scene.glb?alt=media"
+  ];
+  sceneUrls.forEach(url => {
+    useGLTF.preload(url);
+  });
+}, 1000);
