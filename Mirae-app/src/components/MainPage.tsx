@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useGLTF, OrbitControls } from "@react-three/drei";
+import { useGLTF, OrbitControls, Environment } from "@react-three/drei";
 import { Avatar } from "./Avatar";
 import { Canvas } from "@react-three/fiber";
 import JournalBook from "./journal/JournalBook";

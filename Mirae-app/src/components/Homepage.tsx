@@ -39,7 +39,7 @@ const ToastNotification = ({ message, type, onClose }: { message: string; type: 
   const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] animate-slide-down">
       <div className={`${bgColor} text-white px-6 py-3 rounded-lg shadow-lg min-w-[300px] text-center relative overflow-hidden`}>
         <p>{message}</p>
         <div 
@@ -344,7 +344,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
 
       {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
+        <div className="fixed inset-0 flex items-center justify-center z-40">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={closeModal} />
 
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-96 relative z-50 max-h-[90vh] overflow-y-auto">
