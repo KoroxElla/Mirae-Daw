@@ -6,24 +6,21 @@ from services.emotion_category import get_category
 import os
 import json
 
-# DIRECT FILE LOAD - Skip environment variable
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'firebase_key.json')
+# Loading firebase credentials and initialising the app
+firebase_json = os.getenv("FIREBASE_CREDENTIALS")
 
-try:
-    with open(config_path, 'r') as f:
-        cred_dict = json.load(f)
-    
-    # Ensure private key has proper newlines
-    if 'private_key' in cred_dict:
-        cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
-    
-    cred = credentials.Certificate(cred_dict)
+if not firebase_json:
+    raise ValueError("FIREBASE_CREDENTIALS not set")
+
+cred_dict = json.loads(firebase_json)
+
+# Fix newline issue
+cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+
+cred = credentials.Certificate(cred_dict)
+
+if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
-    print("✅ Firebase initialized with config file")
-    
-except Exception as e:
-    print(f"❌ Error loading Firebase config: {e}")
-    raise
 
 db = firestore.client()
 
