@@ -148,7 +148,7 @@ export default function MainPage({
               >
                 {/* Scene Background - loads GLB */}
                 {currentSceneUrl && (
-                  <SceneBackground key={currentSceneUrl} url={currentSceneUrl} emotion={currentEmotion} onLoad={() => setSceneLoaded(true) />
+                  <SceneBackground key={currentSceneUrl} url={currentSceneUrl} emotion={currentEmotion} onLoad={() => setSceneLoaded(true)} />
                 )}
                 
                 {/* Lighting for the scene */}
