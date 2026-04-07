@@ -16,12 +16,13 @@ interface MainPageProps {
 }
 
 // Component to load and display GLB scene background
-function SceneBackground({ url, emotion }: { url: string; emotion: string }) {
+function SceneBackground({ url, emotion, onLoad }: { url: string; emotion: string; onLoad?: () => void; }) {
   const { scene } = useGLTF(url);
   const sceneRef = useRef<THREE.Group>();
 
   useEffect(() => {
     if (scene) {
+      setTimeout(() => onLoad?.(), 300);
       sceneRef.current = scene;
       
       // Configure the scene
@@ -42,7 +43,7 @@ function SceneBackground({ url, emotion }: { url: string; emotion: string }) {
       scene.position.set(0, -1, -3);
       scene.rotation.y = 0;
     }
-  }, [scene]);
+  }, [scene, onLoad]);
 
   if (!scene) return null;
   return <primitive object={scene} />;
@@ -130,6 +131,13 @@ export default function MainPage({
         return (
           <div className="flex flex-col items-center w-full h-full">
             <div className="w-full h-full relative" style={{ minHeight: '500px', height: '70vh', maxHeight: '800px' }}>
+              {!sceneLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+                  <p className="text-white text-lg animate-pulse">
+                    Loading scene...
+                  </p>
+                </div>
+              )}
               <Canvas
                 camera={{ position: [0, 0, 5], fov: 45 }}
                 style={{ width: '100%', height: '100%', background: EMOTION_COLORS[currentEmotion] || '#FFC494' }}
@@ -140,7 +148,7 @@ export default function MainPage({
               >
                 {/* Scene Background - loads GLB */}
                 {currentSceneUrl && (
-                  <SceneBackground url={currentSceneUrl} emotion={currentEmotion} />
+                  <SceneBackground key={currentSceneUrl} url={currentSceneUrl} emotion={currentEmotion} onLoad={() => setSceneLoaded(true) />
                 )}
                 
                 {/* Lighting for the scene */}
@@ -151,7 +159,7 @@ export default function MainPage({
                 <hemisphereLight intensity={0.3} />
                 
                 {/* Avatar - centered */}
-                {avatarData?.avatarUrl && (
+                {sceneLoaded && avatarData?.avatarUrl && (
                   <CenteredAvatar 
                     modelUrl={avatarData.avatarUrl}
                     animation={avatarAnimation}
@@ -246,7 +254,7 @@ export default function MainPage({
 
 // Preload scenes for better performance
 const sceneUrls = [
-  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fanger_scene.glb?alt=media",
+  "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fangry_scene.glb?alt=media",
   "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fdisgust_scene.glb?alt=media",
   "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Ffear_scene.glb?alt=media",
   "https://firebasestorage.googleapis.com/v0/b/daw-db.firebasestorage.app/o/scenes%2Fjoy_scene.glb?alt=media",
