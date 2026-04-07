@@ -33,14 +33,14 @@ function SceneBackground({ url, emotion, onLoad }: { url: string; emotion: strin
           mesh.receiveShadow = false;
           // Ensure materials are visible
           if (mesh.material) {
-            mesh.material.transparent = false;
+            mesh.material.side = THREE.DoubleSide;
           }
         }
       });
       
       // Scale and position the scene appropriately
-      scene.scale.set(2, 2, 2);
-      scene.position.set(0, -1, -3);
+      scene.scale.set(1, 1, 1);
+      scene.position.set(0, 0, 0);
       scene.rotation.y = 0;
     }
   }, [scene, onLoad]);
@@ -152,7 +152,7 @@ export default function MainPage({
                 )}
                 
                 {/* Lighting for the scene */}
-                <ambientLight intensity={0.5} />
+                <ambientLight intensity={1.5} />
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <directionalLight position={[-5, 5, 5]} intensity={0.5} />
                 <pointLight position={[0, 3, 2]} intensity={0.5} />
