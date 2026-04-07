@@ -173,8 +173,17 @@ function AvatarScene({
       }}
       onCreated={({ gl, scene }) => {
         gl.setClearColor(new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494'));
-        // Ensure scene is visible
         scene.background = new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494');
+  
+ 
+        const canvas = gl.domElement;
+        canvas.addEventListener('webglcontextlost', (event) => {
+          event.preventDefault();
+          console.error('WebGL context lost');
+          setTimeout(() => {
+            setRenderKey(prev => prev + 1); // Force remount
+          }, 100);
+        });
       }}
     >
       {/* Lighting for the scene */}
