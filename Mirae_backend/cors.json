@@ -1,8 +1,8 @@
 [
   {
     "origin": ["https://mirae-daw-auo7-1bkadt357-koroxellas-projects.vercel.app"],
-    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
-    "responseHeader": ["Content-Type", "Authorization"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "Content-Encoding"],
     "maxAgeSeconds": 3600
   }
 ]
