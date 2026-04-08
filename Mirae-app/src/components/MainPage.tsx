@@ -50,7 +50,6 @@ export default function MainPage({
         console.log("Scene changed to:", scene);
         setCurrentSceneUrl(scene);
         setSceneLoaded(false);
-        setAvatarLoaded(false);
       }
     }
   });
@@ -92,14 +91,6 @@ export default function MainPage({
     }
   }, []);
 
-  // Reset loading states when tab changes
-  useEffect(() => {
-    if (activeTab !== "avatar") {
-      // Clean up when leaving avatar tab
-      setSceneLoaded(false);
-      setAvatarLoaded(false);
-    }
-  }, [activeTab]);
 
   const tabStyles = {
     avatar: { ring: "ring-orange-400", bg: "bg-orange-100" },
