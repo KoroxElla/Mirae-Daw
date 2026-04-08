@@ -203,7 +203,7 @@ function AvatarScene({
       )}
       
       {/* Avatar */}
-      {sceneReady && avatarData?.avatarUrl && (
+      { avatarData?.avatarUrl && (
         <CenteredAvatar 
           modelUrl={avatarData.avatarUrl}
           animation={avatarAnimation}
