@@ -59,19 +59,7 @@ export function Avatar({
   }, [sceneRef.current, mixerRef.current]);
 
   // Then modify the return to show loading animation
-  if (!sceneRef.current || showLoading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <LoadingAnimation 
-          onComplete={() => {
-            setShowLoading(false);
-            setLoadingComplete(true);
-          }}
-          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
-        />
-      </div>
-    );
-  }
+  if (!sceneRef.current) return null;
 
   // Configure model once when it loads
   useEffect(() => {
