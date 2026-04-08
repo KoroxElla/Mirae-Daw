@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import JournalBook from "./journal/JournalBook";
 import ReminiscePage from "./ReminiscePage"; 
 import ProfilePage from './ProfilePage';
+import AvatarScene from "./AvatarScene";
 import BackgroundMusic from './BackgroundMusic';
 import { useAvatarEmotion, EMOTION_COLORS } from './journal/useAvatarEmotion';
 import * as THREE from 'three';
@@ -15,155 +16,6 @@ interface MainPageProps {
   onLogout: () => void;
 }
 
-// Optimized SceneBackground component with memoization
-const SceneBackground = React.memo(({ url, emotion, onLoad, onError }: { url: string; emotion: string; onLoad?: () => void; onError?: () => void; }) => {
-  const { scene, error } = useGLTF(url);
-  const sceneRef = useRef<THREE.Group>();
-  const { gl } = useThree();
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    if (error) {
-      console.error("Error loading scene:", error);
-      onError?.();
-      return;
-    }
-
-    if (scene && !loadedRef.current) {
-      loadedRef.current = true;
-      try {
-        // Use the scene directly without cloning to save memory
-        scene.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.castShadow = true;
-            mesh.receiveShadow = false;
-            
-            // Fix material issues
-            if (mesh.material) {
-              if (Array.isArray(mesh.material)) {
-                mesh.material.forEach(mat => {
-                  mat.side = THREE.DoubleSide;
-                });
-              } else {
-                mesh.material.side = THREE.DoubleSide;
-              }
-            }
-          }
-        });
-        
-        sceneRef.current = scene;
-        onLoad?.();
-        
-      } catch (err) {
-        console.error("Error processing scene:", err);
-        onError?.();
-      }
-    }
-  }, [scene, error, onLoad, onError]);
-
-  if (error || !scene) return null;
-  return <primitive object={scene} />;
-});
-
-// Optimized CenteredAvatar component
-const CenteredAvatar = React.memo(({ modelUrl, animation, emotionColor, onLoad }: { modelUrl: string; animation: string; emotionColor: string; onLoad?: () => void; }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const loadedRef = useRef(false);
-
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.position.set(0, -1.2, 0);
-    }
-  });
-
-  const handleLoad = useCallback(() => {
-    if (!loadedRef.current) {
-      loadedRef.current = true;
-      onLoad?.();
-    }
-  }, [onLoad]);
-
-  return (
-    <group ref={groupRef}>
-      <Avatar 
-        modelUrl={modelUrl}
-        animation={animation}
-        scale={1.5}
-        showBackground={false}
-        backgroundColor={emotionColor}
-        onLoad={handleLoad}
-      />
-    </group>
-  );
-});
-
-// Main Canvas component with proper cleanup
-function AvatarScene({ 
-  currentSceneUrl, 
-  currentEmotion, 
-  avatarData, 
-  avatarAnimation, 
-  onSceneLoaded, 
-  onAvatarLoaded,
-  isVisible
-}: { 
-  currentSceneUrl: string; 
-  currentEmotion: string; 
-  avatarData: any; 
-  avatarAnimation: string; 
-  onSceneLoaded: () => void;
-  onAvatarLoaded: () => void;
-  isVisible: boolean;
-}) {
-  const [sceneReady, setSceneReady] = useState(false);
-  const [avatarReady, setAvatarReady] = useState(false);
-  const sceneLoadedRef = useRef(false);
-  const avatarLoadedRef = useRef(false);
-  const renderCountRef = useRef(0);
-
-  // Prevent multiple load calls
-  const handleSceneLoad = useCallback(() => {
-    if (!sceneLoadedRef.current) {
-      sceneLoadedRef.current = true;
-      setSceneReady(true);
-      onSceneLoaded();
-    }
-  }, [onSceneLoaded]);
-
-  const handleSceneError = useCallback(() => {
-    console.error("Scene failed to load");
-    if (!sceneLoadedRef.current) {
-      sceneLoadedRef.current = true;
-      setSceneReady(true);
-      onSceneLoaded();
-    }
-  }, [onSceneLoaded]);
-
-  const handleAvatarLoad = useCallback(() => {
-    if (!avatarLoadedRef.current) {
-      avatarLoadedRef.current = true;
-      setAvatarReady(true);
-      onAvatarLoaded();
-    }
-  }, [onAvatarLoaded]);
-
-  // Reset refs when URL changes
-  useEffect(() => {
-    sceneLoadedRef.current = false;
-    avatarLoadedRef.current = false;
-    setSceneReady(false);
-    setAvatarReady(false);
-    
-    // Log only once per URL change
-    renderCountRef.current++;
-    if (renderCountRef.current <= 2) {
-      console.log("Loading scene:", currentSceneUrl);
-    }
-  }, [currentSceneUrl]);
-
-  // Don't render if not visible
-  if (!isVisible) return null;
 
   return (
     <Canvas
@@ -181,50 +33,7 @@ function AvatarScene({
       }}
       onCreated={({ gl, scene }) => {
         gl.setClearColor(new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494'));
-        scene.background = new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494');
-      }}
-    >
-      {/* Lighting */}
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[5, 5, 5]} intensity={1} castShadow />
-      <directionalLight position={[-5, 5, 5]} intensity={0.5} />
-      <pointLight position={[0, 3, 2]} intensity={0.5} />
-      <hemisphereLight intensity={0.3} />
-      
-      {/* Scene Background */}
-      {currentSceneUrl && (
-        <SceneBackground 
-          key={currentSceneUrl}
-          url={currentSceneUrl} 
-          emotion={currentEmotion} 
-          onLoad={handleSceneLoad}
-          onError={handleSceneError}
-        />
-      )}
-      
-      {/* Avatar */}
-      { avatarData?.avatarUrl && (
-        <CenteredAvatar 
-          modelUrl={avatarData.avatarUrl}
-          animation={avatarAnimation}
-          emotionColor={EMOTION_COLORS[currentEmotion] || '#FFC494'}
-          onLoad={handleAvatarLoad}
-        />
-      )}
-      
-      {/* Controls */}
-      <OrbitControls 
-        enableZoom={true}
-        enablePan={false}
-        enableRotate={true}
-        maxPolarAngle={Math.PI / 2.2}
-        minDistance={2}
-        maxDistance={8}
-        target={[0, -0.5, 0]}
-      />
-    </Canvas>
-  );
-}
+    
 
 export default function MainPage({
   avatarData,
@@ -238,8 +47,6 @@ export default function MainPage({
   const [userId, setUserId] = useState<string | null>(null);
   const [currentSceneUrl, setCurrentSceneUrl] = useState<string>("");
   const [currentEmotion, setCurrentEmotion] = useState<string>("neutral");
-  const [sceneLoaded, setSceneLoaded] = useState(false);
-  const [avatarLoaded, setAvatarLoaded] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   
   // Use ref to track if we've already set initial scene
@@ -324,34 +131,30 @@ export default function MainPage({
       case "avatar":
         return (
           <div className="flex flex-col items-center w-full h-full">
-            <div className="w-full h-full relative" style={{ minHeight: '500px', height: '70vh', maxHeight: '800px' }}>
-              {(!sceneLoaded || !avatarLoaded) && (
+            <div
+              className="w-full h-full relative"
+              style={{ minHeight: "500px", height: "70vh", maxHeight: "800px" }}
+            >
+              {/* Optional lightweight loader (non-blocking) */}
+              {!isInitialized && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                    <p className="text-white text-lg">
-                      {!sceneLoaded ? "Loading scene..." : "Loading avatar..."}
-                    </p>
-                  </div>
+                  <div className="text-white">Initializing...</div>
                 </div>
               )}
-              
+
               {isInitialized && (
                 <AvatarScene
                   currentSceneUrl={currentSceneUrl}
                   currentEmotion={currentEmotion}
                   avatarData={avatarData}
                   avatarAnimation={avatarAnimation}
-                  onSceneLoaded={() => setSceneLoaded(true)}
-                  onAvatarLoaded={() => setAvatarLoaded(true)}
-                  isVisible={activeTab === "avatar"}
                 />
               )}
             </div>
 
             <button
               onClick={onCustomize}
-              className="bg-purple-600 text-white px-6 py-2 rounded-full mt-4 z-10 hover:bg-purple-700 transition-colors"
+              className="bg-purple-600 text-white px-6 py-2 rounded-full mt-4 hover:bg-purple-700"
             >
               Customize Avatar
             </button>
