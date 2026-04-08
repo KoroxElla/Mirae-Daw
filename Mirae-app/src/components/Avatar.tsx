@@ -50,13 +50,41 @@ export function Avatar({
   const [modelReady, setModelReady] = useState(false);
   const [animationsReady, setAnimationsReady] = useState(false);
 
+  // Configure model once when it loads
+  useEffect(() => {
+    if (scene && !sceneRef.current) {
+      console.log('Avatar model loaded, configuring...')
+      const clonedScene = scene.clone()
+      sceneRef.current = clonedScene
+      
+      // Configure shadows
+      clonedScene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh
+          mesh.castShadow = true
+          mesh.receiveShadow = true
+        }
+      })
+      
+      // Set initial position
+      clonedScene.position.set(position[0], position[1], position[2])
+      
+      // Create animation mixer
+      const mixer = new THREE.AnimationMixer(scene)
+      mixerRef.current = mixer
+      
+      setIsReady(true)
+      console.log('Avatar ready with mixer')
+    }
+  }, [scene, position])
+
   // When model is configured
   useEffect(() => {
     if (sceneRef.current && mixerRef.current && !modelReady) {
       console.log('Model ready');
       setModelReady(true);
     }
-  }, [sceneRef.current, mixerRef.current]);
+  }, [sceneRef.current, mixerRef.current, modelReady]);
 
   // When animations are loaded
   useEffect(() => {
@@ -89,33 +117,6 @@ export function Avatar({
     );
   }
 
-
-  // Configure model once when it loads
-  useEffect(() => {
-    if (scene && !sceneRef.current) {
-      console.log('Avatar model loaded, configuring...')
-      sceneRef.current = scene
-      
-      // Configure shadows
-      scene.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh
-          mesh.castShadow = true
-          mesh.receiveShadow = true
-        }
-      })
-      
-      // Set initial position
-      scene.position.set(position[0], position[1], position[2])
-      
-      // Create animation mixer
-      const mixer = new THREE.AnimationMixer(scene)
-      mixerRef.current = mixer
-      
-      setIsReady(true)
-      console.log('Avatar ready with mixer')
-    }
-  }, [scene, position])
 
   // Process animation to remove position tracks and keep only rotation tracks
   const processAnimation = useMemo(() => {
