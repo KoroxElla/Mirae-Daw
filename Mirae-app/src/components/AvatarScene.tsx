@@ -21,13 +21,7 @@ export default function AvatarScene({
 }: Props) {
   const bgColor = EMOTION_COLORS[currentEmotion] || "#FFC494";
 
-  {avatarData?.avatarUrl ? (
-    <group position={[0, -1.2, 0]}>
-      <Avatar ... />
-    </group>
-  ) : (
-    <Html center>Loading avatar...</Html>
-  )}
+ 
 
   return (
     <Canvas
