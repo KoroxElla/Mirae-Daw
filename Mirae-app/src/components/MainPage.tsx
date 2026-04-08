@@ -15,24 +15,6 @@ interface MainPageProps {
   onCustomize: () => void;
   onLogout: () => void;
 }
-
-
-  return (
-    <Canvas
-      camera={{ position: [0, 0, 5], fov: 45 }}
-      style={{ 
-        width: '100%', 
-        height: '100%', 
-        background: EMOTION_COLORS[currentEmotion] || '#FFC494',
-        display: 'block'
-      }}
-      gl={{ 
-        alpha: false,
-        antialias: true,
-        powerPreference: "high-performance"
-      }}
-      onCreated={({ gl, scene }) => {
-        gl.setClearColor(new THREE.Color(EMOTION_COLORS[currentEmotion] || '#FFC494'));
     
 
 export default function MainPage({
