@@ -7,9 +7,7 @@ import LoadingAnimation from './LoadingAnimation';
 
 interface AvatarProps {
   position?: [number, number, number]
-  modelUrl: string
-  showBackground?: boolean 
-  backgroundColor?: string
+  modelUrl: string 
   scale?: number
   emotionColor?: string;
 
@@ -34,8 +32,7 @@ export function Avatar({
     }
   });
  
-  showBackground = true,
-  backgroundColor = '#2a2a2a' 
+ 
   // Load avatar model
   const { scene } = useGLTF(modelUrl)
   
@@ -324,39 +321,7 @@ export function Avatar({
 
   return (
     <group ref={group}>
-      {showBackground && (
         <>
-          {/* Circular gradient background */}
-          <mesh position={[0, 0, -0.5]} scale={[2.5, 2.5, 1]}>
-            <planeGeometry args={[2, 2]} />
-            <shaderMaterial
-              uniforms={{
-                color1: { value: new THREE.Color(emotionColor) },
-                color2: { value: new THREE.Color('#1a1a1a') },
-              }}
-              vertexShader={`
-                varying vec2 vUv;
-                void main() {
-                  vUv = uv;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-              `}
-              fragmentShader={`
-                uniform vec3 color1;
-                uniform vec3 color2;
-                varying vec2 vUv;
-                
-                void main() {
-                  float dist = distance(vUv, vec2(0.5, 0.5));
-                  float alpha = 1.0 - smoothstep(0.3, 0.8, dist);
-                  vec3 color = mix(color1, color2, vUv.y);
-                  gl_FragColor = vec4(color, alpha);
-                }
-              `}
-              transparent
-              side={THREE.DoubleSide}
-            />
-          </mesh>
           
           {/* Border ring */}
           <mesh position={[0, -1.2, -0.3]} rotation={[Math.PI / 2, 0, 0]}>
@@ -376,7 +341,7 @@ export function Avatar({
             />
           </mesh>
         </>
-      )}
+     
       
       {/* Environment lighting for better appearance */}
       <ambientLight intensity={0.5} />

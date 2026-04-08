@@ -54,8 +54,6 @@ export default function AvatarScene({
             modelUrl={avatarData.avatarUrl}
             animation={avatarAnimation}
             scale={1.5}
-            showBackground={false}
-            backgroundColor={bgColor}
           />
         </group>
       )}
