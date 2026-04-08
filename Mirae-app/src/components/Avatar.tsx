@@ -10,6 +10,8 @@ interface AvatarProps {
   modelUrl: string 
   scale?: number
   emotionColor?: string;
+  animation?: string;
+  onLoad?: () => void;
 
 }
 
@@ -17,7 +19,9 @@ export function Avatar({
   position = [0,-1.3,0],
   modelUrl, 
   emotionColor = '#FFC494',
-  scale = 3.5 }: AvatarProps) {
+  scale = 3.5,
+  animation = "idle",
+  onLoad }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const currentAction = useRef<THREE.AnimationAction | null>(null)
@@ -42,26 +46,43 @@ export function Avatar({
   // Store the scene in a ref to prevent recreation
   const sceneRef = useRef<THREE.Group | null>(null)
 
+  // Track both model and animations being ready
+  const [modelReady, setModelReady] = useState(false);
+  const [animationsReady, setAnimationsReady] = useState(false);
+
+  // When model is configured
   useEffect(() => {
-    if (sceneRef.current && mixerRef.current) {
-      // Short timeout to ensure everything is ready
-      const timer = setTimeout(() => {
-        setShowLoading(false);
-        setLoadingComplete(true);
-      }, 500);
-      return () => clearTimeout(timer);
+    if (sceneRef.current && mixerRef.current && !modelReady) {
+      console.log('Model ready');
+      setModelReady(true);
     }
   }, [sceneRef.current, mixerRef.current]);
 
-  // Then modify the return to show loading animation
-  if (!sceneRef.current || showLoading) {
+  // When animations are loaded
+  useEffect(() => {
+    if (!isLoading && Object.keys(animationClips).length > 0 && !animationsReady) {
+      console.log('Animations ready');
+      setAnimationsReady(true);
+    }
+  }, [isLoading, animationClips]);
+
+  // When both are ready, hide loading
+  useEffect(() => {
+    if (modelReady && animationsReady) {
+      console.log('Avatar fully ready');
+      setTimeout(() => {
+        setShowLoading(false);
+        onLoad?.();
+      }, 100);
+    }
+  }, [modelReady, animationsReady, onLoad]);
+
+  // Show loading while not ready
+  if (showLoading || !modelReady || !animationsReady) {
     return (
       <Html center>
         <LoadingAnimation 
-          onComplete={() => {
-            setShowLoading(false);
-            setLoadingComplete(true);
-          }}
+          onComplete={() => {}}
           stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
         />
       </Html>
@@ -264,10 +285,10 @@ export function Avatar({
 
   // Handle animation changes
   useEffect(() => {
-    if (isReady && !isLoading && Object.keys(animationClips).length > 0) {
-      playAnimation(currentAnimation)
+    if (modelReady && animationsReady && animation) {
+      playAnimation(animation)
     }
-  }, [currentAnimation, isReady, isLoading, animationClips])
+  }, [animation, modelReady, animationsReady, animationClips])
 
   // Animation loop
   useEffect(() => {

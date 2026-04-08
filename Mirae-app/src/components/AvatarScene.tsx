@@ -5,12 +5,15 @@ import * as THREE from "three";
 import Scene from "./Scene";
 import { Avatar } from "./Avatar";
 import { EMOTION_COLORS } from "./journal/useAvatarEmotion";
+import { useState, useEffect } from "react";
 
 interface Props {
   currentSceneUrl: string;
   currentEmotion: string;
   avatarData: any;
   avatarAnimation: string;
+  onSceneReady?: () => void;
+  onAvatarReady?: () => void;
 }
 
 export default function AvatarScene({
@@ -18,9 +21,31 @@ export default function AvatarScene({
   currentEmotion,
   avatarData,
   avatarAnimation,
+  onSceneReady,
+  onAvatarReady,
 }: Props) {
   const bgColor = EMOTION_COLORS[currentEmotion] || "#FFC494";
+  const [sceneLoaded, setSceneLoaded] = useState(false);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
 
+  // Notify when both are ready
+  useEffect(() => {
+    if (sceneLoaded && avatarLoaded) {
+      console.log("Both scene and avatar are ready!");
+    }
+  }, [sceneLoaded, avatarLoaded]);
+
+  const handleSceneLoad = () => {
+    console.log("Scene loaded callback");
+    setSceneLoaded(true);
+    onSceneReady?.();
+  };
+
+  const handleAvatarLoad = () => {
+    console.log("Avatar loaded callback");
+    setAvatarLoaded(true);
+    onAvatarReady?.();
+  };
  
 
   return (

@@ -4,13 +4,17 @@ import * as THREE from "three";
 
 interface SceneProps {
   url: string;
+  onLoad?: () => void;
 }
 
 export default function Scene({ url }: SceneProps) {
   const { scene } = useGLTF(url);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!scene) return;
+    if (!scene || loaded) return;
+
+    console.log("Processing scene:", url);
 
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -34,8 +38,10 @@ export default function Scene({ url }: SceneProps) {
     // 🔥 CRITICAL: prevent invisible scenes
     scene.position.set(0, 0, 0);
     scene.scale.set(1, 1, 1);
-
-  }, [scene]);
+    setLoaded(true);
+    console.log("Scene processed and ready");
+    onLoad?.();
+  }, [scene,  url, loaded, onLoad]);
 
   if (!scene) return null;
 
