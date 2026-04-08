@@ -1,4 +1,3 @@
-// Scene.tsx
 import { useGLTF } from "@react-three/drei";
 import { useEffect } from "react";
 import * as THREE from "three";
