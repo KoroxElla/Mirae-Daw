@@ -18,8 +18,6 @@ interface AvatarProps {
 export function Avatar({ 
   position = [0,-1.3,0],
   modelUrl, 
-  showBackground = true, 
-  backgroundColor = '#2a2a2a', 
   emotionColor = '#FFC494',
   scale = 3.5 }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
@@ -61,7 +59,7 @@ export function Avatar({
   // Then modify the return to show loading animation
   if (!sceneRef.current || showLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <Html center>
         <LoadingAnimation 
           onComplete={() => {
             setShowLoading(false);
@@ -69,7 +67,7 @@ export function Avatar({
           }}
           stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
         />
-      </div>
+      </Html>
     );
   }
 
