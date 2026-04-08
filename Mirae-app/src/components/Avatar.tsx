@@ -70,7 +70,7 @@ export function Avatar({
       clonedScene.position.set(position[0], position[1], position[2])
       
       // Create animation mixer
-      const mixer = new THREE.AnimationMixer(scene)
+      const mixer = new THREE.AnimationMixer(clonedScene)
       mixerRef.current = mixer
       
       setIsReady(true)
