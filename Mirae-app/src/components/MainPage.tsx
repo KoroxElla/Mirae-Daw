@@ -49,7 +49,6 @@ export default function MainPage({
       if (scene !== currentSceneUrl) {
         console.log("Scene changed to:", scene);
         setCurrentSceneUrl(scene);
-        setSceneLoaded(false);
       }
     }
   });
