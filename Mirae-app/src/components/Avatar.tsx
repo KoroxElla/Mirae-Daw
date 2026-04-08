@@ -18,8 +18,6 @@ interface AvatarProps {
 export function Avatar({ 
   position = [0,-1.3,0],
   modelUrl, 
-  showBackground = true, 
-  backgroundColor = '#2a2a2a', 
   emotionColor = '#FFC494',
   scale = 3.5 }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
@@ -59,7 +57,20 @@ export function Avatar({
   }, [sceneRef.current, mixerRef.current]);
 
   // Then modify the return to show loading animation
-  if (!sceneRef.current) return null;
+  if (!sceneRef.current || showLoading) {
+    return (
+      <Html center>
+        <LoadingAnimation 
+          onComplete={() => {
+            setShowLoading(false);
+            setLoadingComplete(true);
+          }}
+          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
+        />
+      </Html>
+    );
+  }
+
 
   // Configure model once when it loads
   useEffect(() => {
