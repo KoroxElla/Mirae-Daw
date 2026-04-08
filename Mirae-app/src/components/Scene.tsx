@@ -7,7 +7,7 @@ interface SceneProps {
   onLoad?: () => void;
 }
 
-export default function Scene({ url }: SceneProps) {
+export default function Scene({ url, onLoad }: SceneProps) {
   const { scene } = useGLTF(url);
   const [loaded, setLoaded] = useState(false);
 

@@ -335,10 +335,7 @@ export function Avatar({
     }
   }, [])
 
-  // Don't render until scene is ready
-  if (!sceneRef.current) {
-    return null
-  }
+
 
   return (
     <group ref={group}>
