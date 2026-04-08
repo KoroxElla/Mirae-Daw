@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react'
 import * as THREE from 'three'
-import { useGLTF, Environment, Stage } from '@react-three/drei'
+import { useGLTF, Environment, Stage, Html } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
 import { useAvatarEmotion } from './journal/useAvatarEmotion';
 import LoadingAnimation from './LoadingAnimation';
