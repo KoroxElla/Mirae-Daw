@@ -20,7 +20,7 @@ export function Avatar({
   modelUrl, 
   emotionColor = '#FFC494',
   scale = 3.5,
-  animation = "idle",
+  animation = "neutral",
   onLoad }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
