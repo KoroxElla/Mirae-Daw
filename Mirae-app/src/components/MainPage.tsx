@@ -35,12 +35,23 @@ export default function MainPage({
   const initialSceneSetRef = useRef(false);
   const animationRef = useRef(avatarAnimation);
 
+  const emotionToAnimationMap: { [key: string]: string } = {
+    'neutral': 'idle',
+    'joy': 'happy',
+    'sadness': 'sad',
+    'anger': 'angry',
+    'disgust': 'disappointed',
+    'fear': 'scared',
+    'surprise': 'reacting',
+  };
+
   const { 
     currentAnimation, 
     currentScene, 
     currentEmotion: hookEmotion,
   } = useAvatarEmotion({
     onAnimationChange: (anim) => {
+      const mappedAnimation = emotionToAnimationMap[anim] || 'idle';
       console.log("Animation changed to:", anim);
       setAvatarAnimation(anim);
     },

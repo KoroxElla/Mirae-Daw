@@ -6,6 +6,23 @@ interface AnimationClips {
   [key: string]: THREE.AnimationClip
 }
 
+const animationFileMap: { [key: string]: string } = {
+  'idle': 'idle.fbx',
+  'neutral': 'idle.fbx',      
+  'joy': 'happy.fbx',          
+  'happy': 'happy.fbx',
+  'sad': 'sad.fbx',
+  'sadness': 'sad.fbx',        
+  'angry': 'angry.fbx',
+  'anger': 'angry.fbx',
+  'disgust': 'disappointed.fbx', 
+  'fear': 'scared.fbx',
+  'scared': 'scared.fbx',
+  'surprise': 'reacting.fbx',  
+  'reacting': 'reacting.fbx',
+  'disappointed': 'disappointed.fbx',
+}
+
 export function useFBXAnimations() {
   const [animationClips, setAnimationClips] = useState<AnimationClips>({})
   const [isLoading, setIsLoading] = useState(true)
@@ -14,6 +31,9 @@ export function useFBXAnimations() {
   useEffect(() => {
     const loader = new FBXLoader()
     setIsLoading(true)
+
+
+    const uniqueAnimations = ['idle.fbx', 'happy.fbx', 'sad.fbx', 'angry.fbx', 'reacting.fbx', 'disappointed.fbx', 'scared.fbx']
 
     const animations = [
       { name: 'idle.fbx', path: '/animations/idle.fbx' },
@@ -28,6 +48,10 @@ export function useFBXAnimations() {
     const loadedClips: AnimationClips = {}
     let loadedCount = 0
 
+    uniqueAnimations.forEach((fileName) => {
+      const path = `/animations/${fileName}`
+      const animationName = fileName.replace('.fbx', '')
+
     animations.forEach(({ name, path }) => {
       loader.load(
         path,
@@ -40,6 +64,11 @@ export function useFBXAnimations() {
             
             // Optimize clip by removing unnecessary tracks if needed
             loadedClips[name] = clip
+	    for (const [emotion, mappedFile] of Object.entries(animationFileMap)) {
+              if (mappedFile === fileName) {
+                loadedClips[emotion] = clip
+              }
+            }
             setAnimationClips({ ...loadedClips })
             console.log(`✅ Loaded ${name} animation (${clip.tracks.length} tracks)`)
           } else {
@@ -47,9 +76,9 @@ export function useFBXAnimations() {
           }
           
           loadedCount++
-          if (loadedCount === animations.length) {
+          if (loadedCount === uniqueAnimations.length) {
             setIsLoading(false)
-            console.log('🎬 All animations loaded!')
+            console.log('🎬 All animations loaded! Available animations:', Object.keys(loadedClips))
           }
         },
         (xhr) => {

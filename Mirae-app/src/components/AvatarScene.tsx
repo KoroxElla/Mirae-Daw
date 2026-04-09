@@ -4,7 +4,7 @@ import * as THREE from "three";
 import Scene from "./Scene";
 import { Avatar } from "./Avatar";
 import { EMOTION_COLORS } from "./journal/useAvatarEmotion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Props {
   currentSceneUrl: string;
@@ -26,6 +26,8 @@ export default function AvatarScene({
   const bgColor = EMOTION_COLORS[currentEmotion] || "#FFC494";
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const sceneReadyCalledRef = useRef(false);
+  const avatarReadyCalledRef = useRef(false);
 
   // Notify when both are ready
   useEffect(() => {
@@ -37,14 +39,26 @@ export default function AvatarScene({
   const handleSceneLoad = () => {
     console.log("Scene loaded callback");
     setSceneLoaded(true);
-    onSceneReady?.();
+    if (!sceneReadyCalledRef.current && onSceneReady) {
+      sceneReadyCalledRef.current = true;
+      onSceneReady();
+    }
   };
 
   const handleAvatarLoad = () => {
     console.log("Avatar loaded callback");
     setAvatarLoaded(true);
-    onAvatarReady?.();
+    if (!avatarReadyCalledRef.current && onAvatarReady) {
+      avatarReadyCalledRef.current = true;
+      onAvatarReady();
+    }
   };
+
+  useEffect(() => {
+    console.log("AvatarScene received scene URL:", currentSceneUrl);
+    setSceneLoaded(false);
+    sceneReadyCalledRef.current = false;
+  }, [currentSceneUrl]);
  
 
   return (
@@ -69,7 +83,7 @@ export default function AvatarScene({
       <hemisphereLight intensity={0.3} />
 
       {/* 🌍 SCENE (optional, non-blocking) */}
-      {currentSceneUrl && <Scene url={currentSceneUrl} />}
+      {currentSceneUrl && (<Scene key={currentSceneUrl} url={currentSceneUrl} onLoad={handleSceneLoad}/>)}
 
       {/* 🧍 AVATAR (always renders) */}
       {avatarData?.avatarUrl && (

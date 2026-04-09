@@ -29,12 +29,6 @@ export function Avatar({
   const [showLoading, setShowLoading] = useState(true);
   const [loadingComplete, setLoadingComplete] = useState(false);
   
-
-  const { currentAnimation } = useAvatarEmotion({
-    onAnimationChange: (animation) => {
-      console.log('Avatar animation changing to:', animation);
-    }
-  });
  
  
   // Load avatar model
@@ -105,6 +99,13 @@ export function Avatar({
     }
   }, [modelReady, animationsReady, onLoad]);
 
+  useEffect(() => {
+    if (modelReady && animationsReady && animation) {
+      console.log("Attempting to play animation:", animation);
+      console.log("Available animations:", Object.keys(animationClips));
+      playAnimation(animation);
+    }
+  }, [animation, modelReady, animationsReady, animationClips]);
 
 
   // Process animation to remove position tracks and keep only rotation tracks
