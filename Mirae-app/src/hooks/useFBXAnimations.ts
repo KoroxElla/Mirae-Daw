@@ -52,7 +52,6 @@ export function useFBXAnimations() {
       const path = `/animations/${fileName}`
       const animationName = fileName.replace('.fbx', '')
 
-    animations.forEach(({ name, path }) => {
       loader.load(
         path,
         (fbx) => {
