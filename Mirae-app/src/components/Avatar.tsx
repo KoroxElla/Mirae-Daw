@@ -105,17 +105,6 @@ export function Avatar({
     }
   }, [modelReady, animationsReady, onLoad]);
 
-  // Show loading while not ready
-  if (showLoading || !modelReady || !animationsReady) {
-    return (
-      <Html center>
-        <LoadingAnimation 
-          onComplete={() => {}}
-          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
-        />
-      </Html>
-    );
-  }
 
 
   // Process animation to remove position tracks and keep only rotation tracks
@@ -282,6 +271,18 @@ export function Avatar({
     } catch (error) {
       console.error('Error playing animation:', error)
     }
+  }
+
+  // Show loading while not ready
+  if (showLoading || !modelReady || !animationsReady) {
+    return (
+      <Html center>
+        <LoadingAnimation 
+          onComplete={() => {}}
+          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
+        />
+      </Html>
+    );
   }
 
   // Handle animation changes
