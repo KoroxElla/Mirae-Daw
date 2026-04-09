@@ -273,17 +273,7 @@ export function Avatar({
     }
   }
 
-  // Show loading while not ready
-  if (showLoading || !modelReady || !animationsReady) {
-    return (
-      <Html center>
-        <LoadingAnimation 
-          onComplete={() => {}}
-          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
-        />
-      </Html>
-    );
-  }
+
 
   // Handle animation changes
   useEffect(() => {
@@ -337,7 +327,17 @@ export function Avatar({
     }
   }, [])
 
-
+  // Show loading while not ready
+  if (showLoading || !modelReady || !animationsReady) {
+    return (
+      <Html center>
+        <LoadingAnimation 
+          onComplete={() => {}}
+          stages={['Loading 3D model...', 'Setting up animations...', 'Applying expressions...', 'Ready!']}
+        />
+      </Html>
+    );
+  }
 
   return (
     <group ref={group}>
