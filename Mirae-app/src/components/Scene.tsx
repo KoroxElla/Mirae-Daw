@@ -1,5 +1,5 @@
 import { useGLTF } from "@react-three/drei";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import * as THREE from "three";
 
 interface SceneProps {
