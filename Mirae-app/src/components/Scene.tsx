@@ -34,7 +34,7 @@ export default function Scene({ url, onLoad }: SceneProps) {
     cloned.position.z +=3.5
 
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 2 / maxDim;
+    const scale = (2 / maxDim) * 3;
     cloned.scale.setScalar(scale);
 
     cloned.traverse((child) => {
