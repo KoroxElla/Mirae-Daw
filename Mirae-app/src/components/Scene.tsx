@@ -29,7 +29,7 @@ export default function Scene({ url, onLoad }: SceneProps) {
     box.getCenter(center);
 
     cloned.position.sub(center);
-    cloned.position.y +=60;
+    cloned.position.y +=40;
     cloned.position.x +=3.5;
 
     const maxDim = Math.max(size.x, size.y, size.z);
