@@ -63,5 +63,5 @@ export default function Scene({ url, onLoad }: SceneProps) {
 
   if (!processedScene) return null;
 
-  return <primitive object={clonedScene} />;
+  return <primitive object={processedScene} />;
 }
