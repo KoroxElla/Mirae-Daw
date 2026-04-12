@@ -16,7 +16,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ 
-  position = [0,-1.3,0],
+  position = [0, 1.3,0],
   modelUrl, 
   emotionColor = '#FFC494',
   scale = 3.5,
