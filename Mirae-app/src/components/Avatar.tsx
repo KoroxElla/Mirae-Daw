@@ -16,7 +16,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ 
-  position = [0, -13.3,0],
+  position = [0, 13.3,0],
   modelUrl, 
   emotionColor = '#FFC494',
   scale = 3.5,
@@ -342,28 +342,7 @@ export function Avatar({
 
   return (
     <group ref={group}>
-        <>
-          
-          {/* Border ring */}
-          <mesh position={[0, -1.2, -0.3]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[1.0, 0.03, 16, 100]} />
-            <meshStandardMaterial color="#4a4a4a" emissive="#222222" />
-          </mesh>
-          <mesh 
-            position={[0, -1.3, -0.2]} 
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
-            <planeGeometry args={[2.2, 2.2]} />
-            <meshStandardMaterial 
-              color="#222222" 
-              transparent 
-              opacity={0.2}
-              emissive="#000000"
-            />
-          </mesh>
-        </>
-     
-      
+  
       {/* Environment lighting for better appearance */}
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
