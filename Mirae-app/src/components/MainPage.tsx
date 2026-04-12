@@ -52,8 +52,9 @@ export default function MainPage({
   } = useAvatarEmotion({
     onAnimationChange: (anim) => {
       const mappedAnimation = emotionToAnimationMap[anim] || 'idle';
+      const clean = anim.replace('.fbx', '').toLowerCase();
       console.log("Animation changed to:", anim);
-      setAvatarAnimation(anim);
+      setAvatarAnimation(clean);
     },
     onSceneChange: (scene) => {
       // Only update scene if it's different from current

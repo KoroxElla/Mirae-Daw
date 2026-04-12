@@ -12,6 +12,28 @@ export default function Scene({ url, onLoad }: SceneProps) {
   const [loaded, setLoaded] = useState(false);
   const onLoadCalledRef = useRef(false);
 
+  
+  console.log(scene);
+  useEffect(() => {
+    if (!scene) return;
+
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+
+    box.getSize(size);
+    box.getCenter(center);
+
+    // Center the scene
+    scene.position.sub(center);
+
+    // Scale it down
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 2 / maxDim;
+    scene.scale.setScalar(scale);
+
+  }, [scene]);
+
   useEffect(() => {
     if (!scene || loaded) return;
 
@@ -40,9 +62,8 @@ export default function Scene({ url, onLoad }: SceneProps) {
       }
     });
 
-    // 🔥 CRITICAL: prevent invisible scenes
-    clonedScene.position.set(0, 0, 0);
-    clonedScene.scale.set(1, 1, 1);
+    clonedScene.position.set(0, -1, 0);
+    clonedScene.scale.set(0.5, 0.5, 0.5);
     setLoaded(true);
     console.log("Scene processed and ready");
     
