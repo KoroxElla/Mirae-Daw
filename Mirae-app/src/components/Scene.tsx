@@ -29,10 +29,10 @@ export default function Scene({ url, onLoad }: SceneProps) {
     box.getCenter(center);
 
     cloned.position.sub(center);
-    cloned.position.y += 49;
+    cloned.position.y -= 1.3;
 
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = [1, 1, 1];
+    const scale = 2 / maxDim;
     cloned.scale.setScalar(scale);
 
     cloned.traverse((child) => {
