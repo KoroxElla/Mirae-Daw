@@ -10,7 +10,7 @@ interface AvatarProps {
   modelUrl: string 
   scale?: number
   emotionColor?: string;
-  animation?: string;
+  emotion?: string;
   onLoad?: () => void;
 
 }
@@ -20,7 +20,7 @@ export function Avatar({
   modelUrl, 
   emotionColor = '#FFC494',
   scale = 3.5,
-  animation = "neutral",
+  emotion = "neutral",
   onLoad }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
@@ -28,7 +28,15 @@ export function Avatar({
   const [isReady, setIsReady] = useState(false)
   const [showLoading, setShowLoading] = useState(true);
   const [loadingComplete, setLoadingComplete] = useState(false);
-  
+  const emotionToAnimationMap: { [key: string]: string } = {
+    neutral: "idle.fbx",
+    joy: "happy.fbx",
+    sadness: "sad.fbx",
+    anger: "angry.fbx",
+    disgust: "disappointed.fbx",
+    fear: "scared.fbx",
+    surprise: "reacting.fbx",
+  };
  
  
   // Load avatar model
@@ -98,14 +106,6 @@ export function Avatar({
       }, 100);
     }
   }, [modelReady, animationsReady, onLoad]);
-
-  useEffect(() => {
-    if (modelReady && animationsReady && animation) {
-      console.log("Attempting to play animation:", animation);
-      console.log("Available animations:", Object.keys(animationClips));
-      playAnimation(animation);
-    }
-  }, [animation, modelReady, animationsReady, animationClips]);
 
 
   // Process animation to remove position tracks and keep only rotation tracks
@@ -278,10 +278,11 @@ export function Avatar({
 
   // Handle animation changes
   useEffect(() => {
-    if (modelReady && animationsReady && animation) {
-      playAnimation(animation)
+    if (modelReady && animationsReady && emotion) {
+      const animationFile = emotionToAnimationMap[emotion] || "idle.fbx";
+      playAnimation(animationFile);
     }
-  }, [animation, modelReady, animationsReady, animationClips])
+  }, [emotion, modelReady, animationsReady, animationClips])
 
   // Animation loop
   useEffect(() => {
