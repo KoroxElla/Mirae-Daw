@@ -10,7 +10,6 @@ interface Props {
   currentSceneUrl: string;
   currentEmotion: string;
   avatarData: any;
-  avatarAnimation: string;
   onSceneReady?: () => void;
   onAvatarReady?: () => void;
 }
@@ -19,7 +18,6 @@ export default function AvatarScene({
   currentSceneUrl,
   currentEmotion,
   avatarData,
-  avatarAnimation,
   onSceneReady,
   onAvatarReady,
 }: Props) {
