@@ -90,7 +90,7 @@ export default function AvatarScene({
         <group position={[0, -1.2, 0]}>
           <Avatar
             modelUrl={avatarData.avatarUrl}
-            animation={avatarAnimation}
+            emotion={currentEmotion}
             scale={1.5}
             onLoad={handleAvatarLoad}
           />
