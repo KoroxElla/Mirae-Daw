@@ -50,11 +50,9 @@ export default function MainPage({
     currentScene, 
     currentEmotion: hookEmotion,
   } = useAvatarEmotion({
-    onAnimationChange: (anim) => {
-      const mappedAnimation = emotionToAnimationMap[anim] || 'idle';
-      const clean = anim.replace('.fbx', '').toLowerCase();
-      console.log("Animation changed to:", anim);
-      setAvatarAnimation(clean);
+    onAnimationChange: (emotion) => {
+      console.log("Emotion changed to:", emotion);
+      setCurrentEmotion(emotion);
     },
     onSceneChange: (scene) => {
       // Only update scene if it's different from current
@@ -131,7 +129,6 @@ export default function MainPage({
                   currentSceneUrl={currentSceneUrl}
                   currentEmotion={currentEmotion}
                   avatarData={avatarData}
-                  avatarAnimation={avatarAnimation}
                 />
               )}
             </div>
