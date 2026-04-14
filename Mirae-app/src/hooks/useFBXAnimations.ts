@@ -7,20 +7,13 @@ interface AnimationClips {
 }
 
 const animationFileMap: { [key: string]: string } = {
-  'idle': 'idle.fbx',
   'neutral': 'idle.fbx',      
   'joy': 'happy.fbx',          
-  'happy': 'happy.fbx',
-  'sad': 'sad.fbx',
   'sadness': 'sad.fbx',        
-  'angry': 'angry.fbx',
   'anger': 'angry.fbx',
   'disgust': 'disappointed.fbx', 
   'fear': 'scared.fbx',
-  'scared': 'scared.fbx',
   'surprise': 'reacting.fbx',  
-  'reacting': 'reacting.fbx',
-  'disappointed': 'disappointed.fbx',
 }
 
 export function useFBXAnimations() {
