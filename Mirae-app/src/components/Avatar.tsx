@@ -201,7 +201,7 @@ export function Avatar({
             const newTrackName = trackName.replace(fbxName, modelName)
             try {
               const newTrack = track.clone()
-              Object.defineProperty(newTrack, 'name', { value: newTrackName })
+              newTrack.name = newTrackName
               newTracks.push(newTrack)
               remapped = true
               break
@@ -279,8 +279,7 @@ export function Avatar({
   // Handle animation changes
   useEffect(() => {
     if (modelReady && animationsReady && emotion) {
-      const animationFile = emotionToAnimationMap[emotion] || "idle.fbx";
-      playAnimation(animationFile);
+      playAnimation(emotion);
     }
   }, [emotion, modelReady, animationsReady, animationClips])
 
