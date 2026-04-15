@@ -28,15 +28,6 @@ export function Avatar({
   const [isReady, setIsReady] = useState(false)
   const [showLoading, setShowLoading] = useState(true);
   const [loadingComplete, setLoadingComplete] = useState(false);
-  const emotionToAnimationMap: { [key: string]: string } = {
-    neutral: "idle.fbx",
-    joy: "happy.fbx",
-    sadness: "sad.fbx",
-    anger: "angry.fbx",
-    disgust: "disappointed.fbx",
-    fear: "scared.fbx",
-    surprise: "reacting.fbx",
-  };
  
  
   // Load avatar model
