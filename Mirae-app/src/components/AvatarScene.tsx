@@ -114,7 +114,7 @@ export default function AvatarScene({
 
       {/* 🧍 AVATAR (always renders) */}
       {avatarData?.avatarUrl && (
-        <group position={[0, -0..8, 0]}>
+        <group position={[0, -0.8, 0]}>
           <Avatar
             modelUrl={avatarData.avatarUrl}
             emotion={currentEmotion}
