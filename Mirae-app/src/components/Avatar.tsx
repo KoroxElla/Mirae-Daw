@@ -248,7 +248,7 @@ export function Avatar({
 
     try {
       // Process the animation to remove position tracks
-      const processedClip = processAnimation(clip)
+      const processedClip = clip
       
       console.log(`Playing ${animationName}:`, {
         duration: processedClip.duration,
