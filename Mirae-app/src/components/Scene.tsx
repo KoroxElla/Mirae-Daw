@@ -16,10 +16,11 @@ export default function Scene({ url, onLoad }: SceneProps) {
 
   useEffect(() => {
     if (!scene) return;
+    setProcessedScene(null);
 
     console.log("Processing scene:", url);
 
-    const cloned = scene.clone();
+    const cloned = scene.clone(true);
 
     const box = new THREE.Box3().setFromObject(cloned);
     const size = new THREE.Vector3();
