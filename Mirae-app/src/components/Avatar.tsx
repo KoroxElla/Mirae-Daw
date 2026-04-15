@@ -28,7 +28,7 @@ export function Avatar({
   const [isReady, setIsReady] = useState(false)
   const [showLoading, setShowLoading] = useState(true);
   const [loadingComplete, setLoadingComplete] = useState(false);
- 
+  const [clonedModel, setClonedModel] = useState<THREE.Group | null>(null)
  
   // Load avatar model
   const { scene } = useGLTF(modelUrl)
@@ -45,10 +45,9 @@ export function Avatar({
 
   // Configure model once when it loads
   useEffect(() => {
-    if (scene && !sceneRef.current) {
+    if (scene && !clonedModel) {
       console.log('Avatar model loaded, configuring...')
       const clonedScene = scene.clone()
-      sceneRef.current = clonedScene
       
       // Configure shadows
       clonedScene.traverse((child) => {
@@ -65,11 +64,11 @@ export function Avatar({
       // Create animation mixer
       const mixer = new THREE.AnimationMixer(clonedScene)
       mixerRef.current = mixer
-      
+      setClonedModel(clonedScene)  
       setIsReady(true)
       console.log('Avatar ready with mixer')
     }
-  }, [scene, position])
+  }, [scene, position, clonedModel])
 
   // When model is configured
   useEffect(() => {
@@ -339,7 +338,7 @@ export function Avatar({
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-5, 5, 5]} intensity={0.5} />
       
-      <primitive object={sceneRef.current} scale= {scale} position={position} />
+      <primitive object={clonedModel} scale= {scale} position={position} />
     </group>
   )
 }
