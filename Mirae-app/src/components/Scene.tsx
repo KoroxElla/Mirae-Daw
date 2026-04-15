@@ -30,8 +30,8 @@ export default function Scene({ url, onLoad }: SceneProps) {
     box.getCenter(center);
 
     cloned.position.sub(center);
-    cloned.position.y +=2;
-    cloned.position.x +=10.5;
+    cloned.position.y +=5;
+    cloned.position.x +=9.5;
     cloned.position.z +=3.5
     cloned.rotation.y = Math.PI / 2;
 
