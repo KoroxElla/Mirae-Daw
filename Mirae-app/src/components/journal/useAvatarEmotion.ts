@@ -132,7 +132,7 @@ export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatar
         setCurrentAnimation('idle.fbx');
         setCurrentScene('/scenes/neutral_scene.glb');
         setCurrentEmotion('neutral');
-        onAnimationChange?.('idle.fbx');
+        onAnimationChange?.('neutral');
         onSceneChange?.('/scenes/neutral_scene.glb');
         return;
       }
