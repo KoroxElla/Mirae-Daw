@@ -142,10 +142,10 @@ export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatar
         const animation = EMOTION_TO_ANIMATION[emotion];
         const scene = EMOTION_TO_SCENE[emotion];
         
-        setCurrentAnimation(animation);
+        setCurrentAnimation(emotion);
         setCurrentScene(scene);
         setCurrentEmotion(emotion);
-        onAnimationChange?.(animation);
+        onAnimationChange?.(emotion);
         onSceneChange?.(scene);
         
         console.log(`🔄 Loop mode [${loopIndexRef.current % validEmotions.length + 1}/${validEmotions.length}]:`, {
