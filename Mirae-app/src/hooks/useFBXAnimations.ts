@@ -43,7 +43,6 @@ export function useFBXAnimations() {
 
     uniqueAnimations.forEach((fileName) => {
       const path = `/animations/${fileName}`
-      const animationName = fileName.replace('.fbx', '')
 
       loader.load(
         path,
@@ -52,7 +51,19 @@ export function useFBXAnimations() {
           if (fbx.animations && fbx.animations.length > 0) {
             // Get the first animation clip
             const clip = fbx.animations[0]
-            clip.name = name
+			clip.name = fileName
+			loadedClips[fileName] = clip
+
+
+			for (const [emotion, mappedFile] of Object.entries(animationFileMap)) {
+			  if (mappedFile === fileName) {
+			    loadedClips[emotion] = clip
+			  }
+			}
+
+			setAnimationClips({ ...loadedClips })
+			
+			console.log(`✅ Loaded ${fileName} animation`)
             
             // Optimize clip by removing unnecessary tracks if needed
             loadedClips[name] = clip
