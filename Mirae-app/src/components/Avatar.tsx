@@ -111,6 +111,7 @@ export function Avatar({
           modelBones.add(object.name)
         }
       })
+      console.log("🦴 MODEL BONES:", Array.from(modelBones))
 
       // Mapping from FBX/Mixamo bone names to model bone names
       const boneMapping: { [key: string]: string } = {
@@ -172,6 +173,8 @@ export function Avatar({
 
       clip.tracks.forEach((track) => {
         const trackName = track.name
+        const boneName = trackName.split('.')[0]
+        console.log("🎯 FBX TRACK BONE:", boneName)
         
         // SKIP position tracks - these are what make the avatar move/fly away
         if (trackName.includes('.position')) {
@@ -240,6 +243,7 @@ export function Avatar({
     try {
       // Process the animation to remove position tracks
       const processedClip = processAnimation(clip)
+      processedClip.name = animationName
       
       console.log(`Playing ${animationName}:`, {
         duration: processedClip.duration,
