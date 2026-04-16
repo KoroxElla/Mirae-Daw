@@ -242,8 +242,9 @@ export function Avatar({
 
     try {
       // Process the animation to remove position tracks
-      const processedClip = processAnimation(clip)
+      const processedClip = clip
       processedClip.name = animationName
+      processedClip.uuid = THREE.MathUtils.generateUUID()
       
       console.log(`Playing ${animationName}:`, {
         duration: processedClip.duration,
