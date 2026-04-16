@@ -187,7 +187,7 @@ export function Avatar({
         console.log("🎯 FBX TRACK BONE:", boneName)
         
         // SKIP position tracks - these are what make the avatar move/fly away
-        if (trackName.includes('.position') && !trackName.includes('Hips')) {
+        if (trackName.includes('.position')) {
           console.log(`Skipping position track: ${trackName}`)
           return // Skip this track entirely
         }
