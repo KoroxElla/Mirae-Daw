@@ -118,7 +118,7 @@ export default function AvatarScene({
           <Avatar
             modelUrl={avatarData.avatarUrl}
             emotion={currentEmotion}
-            scale={2}
+            scale={1.5}
             onLoad={handleAvatarLoad}
           />
         </group>
