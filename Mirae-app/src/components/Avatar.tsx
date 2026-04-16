@@ -50,6 +50,7 @@ export function Avatar({
     if (scene && !sceneRef.current) {
       console.log('Avatar model loaded, configuring...')
       const clonedScene = SkeletonUtils.clone(scene)
+      console.log(clonedScene.position)
       sceneRef.current = clonedScene
       setAvatarScene(clonedScene)
       
