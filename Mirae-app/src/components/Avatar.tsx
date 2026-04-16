@@ -4,6 +4,7 @@ import { useGLTF, Environment, Stage, Html } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
 import { useAvatarEmotion } from './journal/useAvatarEmotion';
 import LoadingAnimation from './LoadingAnimation';
+import { SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils'
 
 interface AvatarProps {
   position?: [number, number, number]
@@ -47,7 +48,7 @@ export function Avatar({
   useEffect(() => {
     if (scene && !sceneRef.current) {
       console.log('Avatar model loaded, configuring...')
-      const clonedScene = scene.clone()
+      const clonedScene = SkeletonUtils.clone(scene)
       sceneRef.current = clonedScene
       
       // Configure shadows
@@ -63,7 +64,15 @@ export function Avatar({
       clonedScene.position.set(position[0], position[1], position[2])
       
       // Create animation mixer
-      const mixer = new THREE.AnimationMixer(clonedScene)
+      let skinnedMesh: THREE.SkinnedMesh | null = null
+
+      clonedScene.traverse((child) => {
+        if ((child as THREE.SkinnedMesh).isSkinnedMesh) {
+          skinnedMesh = child as THREE.SkinnedMesh
+        }
+      })
+      
+      const mixer = new THREE.AnimationMixer(skinnedMesh || clonedScene)
       mixerRef.current = mixer
       
       setIsReady(true)
@@ -177,7 +186,7 @@ export function Avatar({
         console.log("🎯 FBX TRACK BONE:", boneName)
         
         // SKIP position tracks - these are what make the avatar move/fly away
-        if (trackName.includes('.position')) {
+        if (trackName.includes('.position') && !trackName.includes('Hips')) {
           console.log(`Skipping position track: ${trackName}`)
           return // Skip this track entirely
         }
