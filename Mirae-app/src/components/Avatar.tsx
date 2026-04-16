@@ -332,7 +332,7 @@ export function Avatar({
   }
 
   return (
-    <group ref={group}>
+    <group ref={group} position={position}>
   
       {/* Environment lighting for better appearance */}
       <ambientLight intensity={0.5} />
@@ -340,7 +340,7 @@ export function Avatar({
       <directionalLight position={[-5, 5, 5]} intensity={0.5} />
       
       {avatarScene && (
-        <primitive object={avatarScene} scale={scale} position={position} />
+        <primitive object={avatarScene} scale={scale} />
       )}
     </group>
   )
