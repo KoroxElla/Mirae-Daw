@@ -62,8 +62,6 @@ export function Avatar({
         }
       })
       
-      // Set initial position
-      clonedScene.position.set(position[0], position[1], position[2])
       
       // Create animation mixer
       let skinnedMesh: THREE.SkinnedMesh | null = null
@@ -80,7 +78,7 @@ export function Avatar({
       setIsReady(true)
       console.log('Avatar ready with mixer')
     }
-  }, [scene, position])
+  }, [scene])
 
   // When model is configured
   useEffect(() => {
@@ -311,20 +309,6 @@ export function Avatar({
       cancelAnimationFrame(animationFrame)
     }
   }, [])
-
-  // Ensure position stays fixed (in case any position tracks slip through)
-  useEffect(() => {
-    if (sceneRef.current) {
-      // Reset position every frame to ensure it stays put
-      const interval = setInterval(() => {
-        if (sceneRef.current) {
-          sceneRef.current.position.set(position[0], position[1], position[2])
-        }
-      }, 16) // ~60fps
-
-      return () => clearInterval(interval)
-    }
-  }, [position])
 
   // Cleanup on unmount
   useEffect(() => {
