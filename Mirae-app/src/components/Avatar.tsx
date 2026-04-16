@@ -4,7 +4,7 @@ import { useGLTF, Environment, Stage, Html } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
 import { useAvatarEmotion } from './journal/useAvatarEmotion';
 import LoadingAnimation from './LoadingAnimation';
-import { SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils'
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils'
 
 interface AvatarProps {
   position?: [number, number, number]
