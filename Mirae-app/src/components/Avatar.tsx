@@ -29,6 +29,7 @@ export function Avatar({
   const [isReady, setIsReady] = useState(false)
   const [showLoading, setShowLoading] = useState(true);
   const [loadingComplete, setLoadingComplete] = useState(false);
+  const [avatarScene, setAvatarScene] = useState<THREE.Group | null>(null)
  
  
   // Load avatar model
@@ -50,6 +51,7 @@ export function Avatar({
       console.log('Avatar model loaded, configuring...')
       const clonedScene = SkeletonUtils.clone(scene)
       sceneRef.current = clonedScene
+      setAvatarScene(clonedScene)
       
       // Configure shadows
       clonedScene.traverse((child) => {
@@ -353,7 +355,9 @@ export function Avatar({
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-5, 5, 5]} intensity={0.5} />
       
-      <primitive object={sceneRef.current} scale= {scale} position={position} />
+      {avatarScene && (
+        <primitive object={avatarScene} scale={scale} position={position} />
+      )}
     </group>
   )
 }
