@@ -4,23 +4,24 @@ import { useGLTF, Environment, Stage, Html } from '@react-three/drei'
 import { useFBXAnimations } from '../hooks/useFBXAnimations'
 import { useAvatarEmotion } from './journal/useAvatarEmotion';
 import LoadingAnimation from './LoadingAnimation';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils'
 
 interface AvatarProps {
   position?: [number, number, number]
   modelUrl: string 
   scale?: number
   emotionColor?: string;
-  animation?: string;
+  emotion?: string;
   onLoad?: () => void;
 
 }
 
 export function Avatar({ 
-  position = [0,-1.3,0],
+  position = [0, 0.7, 0],
   modelUrl, 
   emotionColor = '#FFC494',
   scale = 3.5,
-  animation = "neutral",
+  emotion = "neutral",
   onLoad }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
@@ -28,7 +29,7 @@ export function Avatar({
   const [isReady, setIsReady] = useState(false)
   const [showLoading, setShowLoading] = useState(true);
   const [loadingComplete, setLoadingComplete] = useState(false);
-  
+  const [avatarScene, setAvatarScene] = useState<THREE.Group | null>(null)
  
  
   // Load avatar model
@@ -48,8 +49,10 @@ export function Avatar({
   useEffect(() => {
     if (scene && !sceneRef.current) {
       console.log('Avatar model loaded, configuring...')
-      const clonedScene = scene.clone()
+      const clonedScene = SkeletonUtils.clone(scene)
+      console.log(clonedScene.position)
       sceneRef.current = clonedScene
+      setAvatarScene(clonedScene)
       
       // Configure shadows
       clonedScene.traverse((child) => {
@@ -60,17 +63,23 @@ export function Avatar({
         }
       })
       
-      // Set initial position
-      clonedScene.position.set(position[0], position[1], position[2])
       
       // Create animation mixer
-      const mixer = new THREE.AnimationMixer(clonedScene)
+      let skinnedMesh: THREE.SkinnedMesh | null = null
+
+      clonedScene.traverse((child) => {
+        if ((child as THREE.SkinnedMesh).isSkinnedMesh) {
+          skinnedMesh = child as THREE.SkinnedMesh
+        }
+      })
+      
+      const mixer = new THREE.AnimationMixer(skinnedMesh || clonedScene)
       mixerRef.current = mixer
       
       setIsReady(true)
       console.log('Avatar ready with mixer')
     }
-  }, [scene, position])
+  }, [scene])
 
   // When model is configured
   useEffect(() => {
@@ -99,14 +108,6 @@ export function Avatar({
     }
   }, [modelReady, animationsReady, onLoad]);
 
-  useEffect(() => {
-    if (modelReady && animationsReady && animation) {
-      console.log("Attempting to play animation:", animation);
-      console.log("Available animations:", Object.keys(animationClips));
-      playAnimation(animation);
-    }
-  }, [animation, modelReady, animationsReady, animationClips]);
-
 
   // Process animation to remove position tracks and keep only rotation tracks
   const processAnimation = useMemo(() => {
@@ -120,6 +121,7 @@ export function Avatar({
           modelBones.add(object.name)
         }
       })
+      console.log("🦴 MODEL BONES:", Array.from(modelBones))
 
       // Mapping from FBX/Mixamo bone names to model bone names
       const boneMapping: { [key: string]: string } = {
@@ -181,6 +183,8 @@ export function Avatar({
 
       clip.tracks.forEach((track) => {
         const trackName = track.name
+        const boneName = trackName.split('.')[0]
+        console.log("🎯 FBX TRACK BONE:", boneName)
         
         // SKIP position tracks - these are what make the avatar move/fly away
         if (trackName.includes('.position')) {
@@ -201,7 +205,7 @@ export function Avatar({
             const newTrackName = trackName.replace(fbxName, modelName)
             try {
               const newTrack = track.clone()
-              Object.defineProperty(newTrack, 'name', { value: newTrackName })
+              newTrack.name = newTrackName
               newTracks.push(newTrack)
               remapped = true
               break
@@ -249,6 +253,8 @@ export function Avatar({
     try {
       // Process the animation to remove position tracks
       const processedClip = processAnimation(clip)
+      processedClip.name = animationName
+      processedClip.uuid = THREE.MathUtils.generateUUID()
       
       console.log(`Playing ${animationName}:`, {
         duration: processedClip.duration,
@@ -278,10 +284,10 @@ export function Avatar({
 
   // Handle animation changes
   useEffect(() => {
-    if (modelReady && animationsReady && animation) {
-      playAnimation(animation)
+    if (modelReady && animationsReady && emotion) {
+      playAnimation(emotion);
     }
-  }, [animation, modelReady, animationsReady, animationClips])
+  }, [emotion, modelReady, animationsReady, animationClips])
 
   // Animation loop
   useEffect(() => {
@@ -305,20 +311,6 @@ export function Avatar({
     }
   }, [])
 
-  // Ensure position stays fixed (in case any position tracks slip through)
-  useEffect(() => {
-    if (sceneRef.current) {
-      // Reset position every frame to ensure it stays put
-      const interval = setInterval(() => {
-        if (sceneRef.current) {
-          sceneRef.current.position.set(position[0], position[1], position[2])
-        }
-      }, 16) // ~60fps
-
-      return () => clearInterval(interval)
-    }
-  }, [position])
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -341,36 +333,16 @@ export function Avatar({
   }
 
   return (
-    <group ref={group}>
-        <>
-          
-          {/* Border ring */}
-          <mesh position={[0, -1.2, -0.3]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[1.0, 0.03, 16, 100]} />
-            <meshStandardMaterial color="#4a4a4a" emissive="#222222" />
-          </mesh>
-          <mesh 
-            position={[0, -1.3, -0.2]} 
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
-            <planeGeometry args={[2.2, 2.2]} />
-            <meshStandardMaterial 
-              color="#222222" 
-              transparent 
-              opacity={0.2}
-              emissive="#000000"
-            />
-          </mesh>
-        </>
-     
-      
+    <group ref={group} position={position}>
+  
       {/* Environment lighting for better appearance */}
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-5, 5, 5]} intensity={0.5} />
       
-      <primitive object={sceneRef.current} scale= {scale} position={position} />
+      {avatarScene && (
+        <primitive object={avatarScene} scale={scale} />
+      )}
     </group>
   )
 }
-

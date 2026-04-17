@@ -116,10 +116,9 @@ export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatar
       const animation = EMOTION_TO_ANIMATION[emotion] || 'idle.fbx';
       const scene = EMOTION_TO_SCENE[emotion] || '/scenes/neutral_scene.glb';
       
-      setCurrentAnimation(animation);
       setCurrentScene(scene);
       setCurrentEmotion(emotion);
-      onAnimationChange?.(animation);
+      onAnimationChange?.(emotion);
       onSceneChange?.(scene);
       
       console.log('🎬 Single mode - Animation:', animation, 'Scene:', scene, 'Emotion:', emotion);
@@ -129,10 +128,9 @@ export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatar
       const validEmotions = currentState.emotions.filter(e => EMOTION_TO_ANIMATION[e]);
       
       if (validEmotions.length === 0) {
-        setCurrentAnimation('idle.fbx');
         setCurrentScene('/scenes/neutral_scene.glb');
         setCurrentEmotion('neutral');
-        onAnimationChange?.('idle.fbx');
+        onAnimationChange?.('neutral');
         onSceneChange?.('/scenes/neutral_scene.glb');
         return;
       }
@@ -142,10 +140,9 @@ export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatar
         const animation = EMOTION_TO_ANIMATION[emotion];
         const scene = EMOTION_TO_SCENE[emotion];
         
-        setCurrentAnimation(animation);
         setCurrentScene(scene);
         setCurrentEmotion(emotion);
-        onAnimationChange?.(animation);
+        onAnimationChange?.(emotion);
         onSceneChange?.(scene);
         
         console.log(`🔄 Loop mode [${loopIndexRef.current % validEmotions.length + 1}/${validEmotions.length}]:`, {
@@ -169,7 +166,6 @@ export function useAvatarEmotion({ onAnimationChange, onSceneChange }: UseAvatar
   }, [currentState, onAnimationChange, onSceneChange]);
 
   return {
-    currentAnimation,
     currentScene,
     currentEmotion,
     currentState,

@@ -35,26 +35,15 @@ export default function MainPage({
   const initialSceneSetRef = useRef(false);
   const animationRef = useRef(avatarAnimation);
 
-  const emotionToAnimationMap: { [key: string]: string } = {
-    'neutral': 'idle',
-    'joy': 'happy',
-    'sadness': 'sad',
-    'anger': 'angry',
-    'disgust': 'disappointed',
-    'fear': 'scared',
-    'surprise': 'reacting',
-  };
 
   const { 
     currentAnimation, 
     currentScene, 
     currentEmotion: hookEmotion,
   } = useAvatarEmotion({
-    onAnimationChange: (anim) => {
-      const mappedAnimation = emotionToAnimationMap[anim] || 'idle';
-      const clean = anim.replace('.fbx', '').toLowerCase();
-      console.log("Animation changed to:", anim);
-      setAvatarAnimation(clean);
+    onAnimationChange: (emotion) => {
+      console.log("Emotion changed to:", emotion);
+      setCurrentEmotion(emotion);
     },
     onSceneChange: (scene) => {
       // Only update scene if it's different from current
@@ -131,7 +120,6 @@ export default function MainPage({
                   currentSceneUrl={currentSceneUrl}
                   currentEmotion={currentEmotion}
                   avatarData={avatarData}
-                  avatarAnimation={avatarAnimation}
                 />
               )}
             </div>
