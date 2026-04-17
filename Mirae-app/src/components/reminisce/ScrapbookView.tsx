@@ -1,4 +1,3 @@
-// components/reminisce/ScrapbookView.tsx
 import React, { useState } from "react";
 import AvatarDisplay from "./AvatarDisplay";
 import { AvatarConfig } from "./AvatarDisplay";
@@ -46,6 +45,21 @@ export default function ScrapbookView({ entries, avatarConfig }: Props) {
 
   const totalPages = Math.ceil(entries.length / entriesPerPage);
 
+  // Show empty state if no entries
+  if (entries.length === 0) {
+    return (
+      <div className="relative w-full h-full bg-amber-100 rounded-xl overflow-hidden">
+        <div className="flex items-center justify-center h-[500px]">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📖</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Empty Scrapbook</h3>
+            <p className="text-gray-500">Your memories will appear here as you journal</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full bg-amber-100 rounded-xl overflow-hidden">
       {/* Scrapbook Paper Texture */}
@@ -61,15 +75,6 @@ export default function ScrapbookView({ entries, avatarConfig }: Props) {
             const randomRotation = (index % 3 - 1) * 4 + (Math.random() * 4 - 2);
             
             return (
-             {entries.length === 0 ? (
-               <div className="flex items-center justify-center h-[500px]">
-                 <div className="text-center">
-                   <div className="text-6xl mb-4">📖</div>
-                   <h3 className="text-xl font-semibold text-gray-700 mb-2">Empty Scrapbook</h3>
-                   <p className="text-gray-500">Your memories will appear here as you journal</p>
-                 </div>
-               </div>
-              ) : (
               <div
                 key={entry.id}
                 className="group cursor-pointer transition-all hover:scale-105"
@@ -202,6 +207,5 @@ export default function ScrapbookView({ entries, avatarConfig }: Props) {
         </div>
       )}
     </div>
-   )}
   );
 }
