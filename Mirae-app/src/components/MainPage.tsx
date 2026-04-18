@@ -6,6 +6,8 @@ import JournalBook from "./journal/JournalBook";
 import ReminiscePage from "./ReminiscePage"; 
 import ProfilePage from './ProfilePage';
 import AvatarScene from "./AvatarScene";
+import ChatPage from "./ChatPage";
+import DailyEncouragement from "./DailyEncouragement";
 import BackgroundMusic from './BackgroundMusic';
 import { useAvatarEmotion, EMOTION_COLORS } from './journal/useAvatarEmotion';
 import * as THREE from 'three';
@@ -130,6 +132,7 @@ export default function MainPage({
             >
               Customize Avatar
             </button>
+            <DailyEncouragement userId={userId || ''} />
           </div>
         );
 
@@ -138,7 +141,7 @@ export default function MainPage({
       case "reminisce":
         return <ReminiscePage userId={userId} />;
       case "chat":
-        return <h2 className="text-xl">Chat Time Page (Coming Next)</h2>;
+        return <ChatPage userId={userId || ''};
       default:
         return null;
     }
