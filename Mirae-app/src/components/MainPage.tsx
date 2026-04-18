@@ -141,7 +141,7 @@ export default function MainPage({
       case "reminisce":
         return <ReminiscePage userId={userId} />;
       case "chat":
-        return <ChatPage userId={userId || ''};
+        return <ChatPage userId={userId || ''}/>;
       default:
         return null;
     }
