@@ -14,6 +14,7 @@ const JournalEditor: React.FC<Props> = ({ initialContent, onSave, onClose }) => 
   const [isErasing, setIsErasing] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
