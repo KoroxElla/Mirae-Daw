@@ -87,9 +87,9 @@ const JournalEditor: React.FC<Props> = ({ initialContent, onSave, onClose }) => 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
     >
-      <div className="flex w-[1200px] h-[800px] bg-white rounded-lg overflow-hidden">
+      <div className="flex flex-col lg:flex-row w-full max-w-5xl h-[90vh] bg-white rounded-lg overflow-hidden">
         {/* Left side - Journal page preview */}
-        <div className="flex-1 bg-stone-200 p-5" ref={previewRef}>
+        <div className="hidden lg:block lg:flex-1 bg-stone-200 p-5" ref={previewRef}>
           <div 
             className="w-full h-full bg-amber-50 bg-[url('/journal/openjournal.png')] bg-cover bg-center shadow-inner relative font-comic"
             style={{ 
@@ -102,12 +102,12 @@ const JournalEditor: React.FC<Props> = ({ initialContent, onSave, onClose }) => 
               ref={textContainerRef}
               className="absolute whitespace-pre-wrap break-words text-shadow-sm text-lg"
               style={{
-                top: '8px',      // Adjust this to move text up/down
-                left: '71px',     // Adjust this to move text left/right
-                right: '60px',    // Right margin
-                bottom: '60px',   // Bottom margin
+                top: '8px',     
+                left: '71px',    
+                right: '60px',  
+                bottom: '60px',  
                 fontFamily: 'Comic Sans MS, cursive',
-                lineHeight: '28px', // Match the lineHeight in calculation
+                lineHeight: '28px', 
                 color: '#2c3e50',
                 overflowY: 'auto'
               }}
@@ -126,7 +126,7 @@ const JournalEditor: React.FC<Props> = ({ initialContent, onSave, onClose }) => 
         </div>
 
         {/* Right side - Text editor */}
-        <div className="w-[400px] bg-gray-100 p-5 flex flex-col">
+        <div className="flex-1 bg-gray-100 p-4 flex flex-col">
           <textarea
             ref={textareaRef}
             value={content}
@@ -138,20 +138,27 @@ const JournalEditor: React.FC<Props> = ({ initialContent, onSave, onClose }) => 
             autoFocus
           />
           
-          <div className="flex gap-2.5 mt-5">
+          <div className="flex gap-2 mt-4">
             <button 
               onClick={() => onSave(content)} 
-              className="flex-1 py-3 bg-green-500 text-white border-none rounded cursor-pointer text-base hover:bg-green-600 transition-colors"
+              className="flex-1 py-2 bg-green-500 text-white border-none rounded cursor-pointer text-base hover:bg-green-600 transition-colors"
             >
               Save Entry
             </button>
             <button 
               onClick={onClose} 
-              className="flex-1 py-3 bg-red-500 text-white border-none rounded cursor-pointer text-base hover:bg-red-600 transition-colors"
+              className="flex-1 py-2 bg-red-500 text-white border-none rounded cursor-pointer text-base hover:bg-red-600 transition-colors"
             >
               Cancel
             </button>
           </div>
+          {/* Mobile preview toggle */}
+          <button 
+            onClick={() => setIsPreviewOpen(!isPreviewOpen)}
+            className="lg:hidden mt-2 py-1 text-sm text-purple-600"
+          >
+            {isPreviewOpen ? 'Hide Preview' : 'Show Preview'}
+          </button>
         </div>
       </div>
     </motion.div>

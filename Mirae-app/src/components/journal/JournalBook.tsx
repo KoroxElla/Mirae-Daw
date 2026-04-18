@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+// journal/JournalBook.tsx - Update the flip book section
+import React, { useState, useEffect, useRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import JournalCover from './JournalCover';
 import JournalPage from './JournalPage';
 import JournalEditor from './JournalEditor';
 import type { JournalEntry, JournalSettings } from './types';
 import { useAvatarEmotion } from './useAvatarEmotion';
+import ChatSuggestion from './ChatSuggestion';
 
 interface JournalBookProps {
   userId: string;
@@ -19,9 +21,28 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const flipBook = React.useRef<any>(null);
+  const [showChatSuggestion, setShowChatSuggestion] = useState(false);
+  const [lastNeutralEntryId, setLastNeutralEntryId] = useState<string | null>(null);
+  const [bookDimensions, setBookDimensions] = useState({ width: 350, height: 450 });
+  const flipBook = useRef<any>(null);
   
   const { updateFromBackend } = useAvatarEmotion();
+
+  // Handle window resize for responsive book
+  useEffect(() => {
+    const updateDimensions = () => {
+      const maxWidth = Math.min(400, window.innerWidth - 80);
+      const maxHeight = Math.min(520, window.innerHeight - 200);
+      setBookDimensions({
+        width: maxWidth,
+        height: maxHeight
+      });
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
 
   // Load journal data on mount
   useEffect(() => {
@@ -47,7 +68,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
 
   // API Calls
   const fetchJournalSettings = async (): Promise<JournalSettings> => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/settings`, {
+    const response = await fetch(`/journal/settings`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -57,7 +78,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const fetchAllEntries = async (): Promise<JournalEntry[]> => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/me`, {
+    const response = await fetch(`/journal/me`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -67,7 +88,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const saveJournalEntry = async (text: string): Promise<any> => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/save`, {
+    const response = await fetch(`/journal/save`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,7 +101,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const deleteJournalEntry = async (entryId: string): Promise<any> => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/delete/${entryId}`, {
+    const response = await fetch(`/journal/delete/${entryId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -91,7 +112,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const updateJournalSettings = async (title: string, cover: string): Promise<void> => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/settings`, {
+    const response = await fetch(`/journal/settings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -102,7 +123,6 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     if (!response.ok) throw new Error('Failed to update settings');
   };
 
-  // Journal actions
   const handleSwitchCover = async (newCover: string) => {
     const updatedSettings = { ...settings, cover: newCover };
     try {
@@ -133,6 +153,17 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
           mode: result.mode,
           emotions: result.emotions
         });
+        
+        // Show chat suggestion if emotion is neutral
+        if (result.mode === 'single' && result.emotions[0] === 'neutral') {
+          setShowChatSuggestion(true);
+          setLastNeutralEntryId(result.entryId || entries[0]?.id);
+          
+          // Auto-hide after 30 seconds
+          setTimeout(() => {
+            setShowChatSuggestion(false);
+          }, 30000);
+        }
       }
       
       const updatedEntries = await fetchAllEntries();
@@ -180,8 +211,13 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     setIsEditing(true);
   };
 
+  const handleChatClick = (entryId: string) => {
+    // Navigate to chat tab with this entry linked
+    window.dispatchEvent(new CustomEvent('openChat', { detail: { entryId } }));
+    setShowChatSuggestion(false);
+  };
+
   const onFlip = (e: any) => {
-    // Optional: Handle flip events
     console.log('Current page: ' + e.data);
   };
 
@@ -206,97 +242,96 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-5">
-      {/* Journal Header */}
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-full mx-auto p-4">
+      {/* Journal Header - Responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <input
           type="text"
           value={settings.title}
           onChange={(e) => handleUpdateJournalName(e.target.value)}
-          className="text-2xl p-2 border-2 border-gray-300 rounded-lg font-comic"
+          className="text-xl sm:text-2xl p-2 border-2 border-gray-300 rounded-lg font-comic text-center sm:text-left"
           placeholder="Journal Name"
         />
         <button 
           onClick={startNewEntry} 
-          className="bg-green-500 text-white border-none px-6 py-3 rounded-lg cursor-pointer text-base hover:bg-green-600 transition-colors"
+          className="bg-green-500 text-white border-none px-4 sm:px-6 py-2 rounded-lg cursor-pointer text-sm sm:text-base hover:bg-green-600 transition-colors"
         >
-          Start New Entry
+          ✨ Start New Entry
         </button>
       </div>
 
-      {/* Book Pages - Using react-pageflip */}
-      <div className="flex justify-center">
-        <HTMLFlipBook 
-          width={400} 
-          height={550}
-          maxShadowOpacity={0.5}
-          drawShadow={true}
-          showCover={true}
-          size="fixed"
-          minWidth={300}
-          maxWidth={500}
-          minHeight={400}
-          maxHeight={600}
-          flippingTime={800}
-          usePortrait={true}
-          startPage={0}
-          onFlip={onFlip}
-          ref={flipBook}
-          className="shadow-2xl"
-          style={{}}
-          startZIndex={0}
-          autoSize={true}
-          clickEventForward={false}
-          useMouseEvents={true}
-          swipeDistance={30}
-          mobileScrollSupport={true}
-        >
-          {/* Cover Page */}
-          <div className="page" style={{ background: 'transparent' }}>
-            <div className="page-content p-0">
-              <JournalCover
-                cover={settings.cover}
-                onSwitchCover={() => handleSwitchCover(
-                  settings.cover === 'journalcover_1.jpeg' 
-                    ? 'journalcover_2.png' 
-                    : 'journalcover_1.jpeg'
-                )}
-                journalName={settings.title}
-              />
-            </div>
-          </div>
-
-          {/* Journal Entry Pages */}
-          {entries.map((entry, index) => (
-            <div className="page" key={entry.id}>
-              <div className="page-content p-5 bg-amber-50 bg-[url('/journal/openjournal.png')] bg-cover bg-center">
-                <JournalPage
-                  entry={entry}
-                  onEdit={() => handleEditEntry(entry)}
-                  onDelete={() => handleDeleteEntry(entry.id)}
+      {/* Book Container - Centered and Responsive */}
+      <div className="flex justify-center items-center">
+        <div style={{ width: bookDimensions.width, height: bookDimensions.height }}>
+          <HTMLFlipBook 
+            width={bookDimensions.width}
+            height={bookDimensions.height}
+            maxShadowOpacity={0.5}
+            drawShadow={true}
+            showCover={true}
+            size="fixed"
+            minWidth={280}
+            maxWidth={450}
+            minHeight={380}
+            maxHeight={550}
+            flippingTime={600}
+            usePortrait={true}
+            startPage={0}
+            onFlip={onFlip}
+            ref={flipBook}
+            className="shadow-2xl"
+            autoSize={false}
+            useMouseEvents={true}
+            swipeDistance={20}
+            mobileScrollSupport={true}
+          >
+            {/* Cover Page */}
+            <div className="page" style={{ background: 'transparent' }}>
+              <div className="page-content p-0">
+                <JournalCover
+                  cover={settings.cover}
+                  onSwitchCover={() => handleSwitchCover(
+                    settings.cover === 'journalcover_1.jpeg' 
+                      ? 'journalcover_2.png' 
+                      : 'journalcover_1.jpeg'
+                  )}
+                  journalName={settings.title}
                 />
               </div>
             </div>
-          ))}
-        </HTMLFlipBook>
+
+            {/* Journal Entry Pages */}
+            {entries.map((entry, index) => (
+              <div className="page" key={entry.id}>
+                <div className="page-content p-0">
+                  <JournalPage
+                    entry={entry}
+                    onEdit={() => handleEditEntry(entry)}
+                    onDelete={() => handleDeleteEntry(entry.id)}
+                  />
+                </div>
+              </div>
+            ))}
+          </HTMLFlipBook>
+        </div>
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-center items-center gap-5 mt-5">
+      {/* Navigation Buttons - Responsive */}
+      <div className="flex justify-center items-center gap-3 sm:gap-5 mt-5">
         <button 
           onClick={prevPage}
-          className="px-5 py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all"
+          className="px-3 sm:px-5 py-1.5 sm:py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base"
         >
-          Previous
+          ← Previous
         </button>
-        <span className="text-sm text-gray-600 px-4">
+        <span className="text-xs sm:text-sm text-gray-600 px-2 sm:px-4">
           {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
         </span>
         <button 
           onClick={nextPage}
-          className="px-5 py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all"
+          className="px-3 sm:px-5 py-1.5 sm:py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base"
         >
-          Next
+          Next →
         </button>
       </div>
 
@@ -309,6 +344,14 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
             setIsEditing(false);
             setEditingEntry(null);
           }}
+        />
+      )}
+
+      {/* Chat Suggestion Bubble for Neutral Entries */}
+      {showChatSuggestion && lastNeutralEntryId && (
+        <ChatSuggestion
+          entryId={lastNeutralEntryId}
+          onChatClick={handleChatClick}
         />
       )}
     </div>
