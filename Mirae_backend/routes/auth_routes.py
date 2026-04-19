@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 import logging
 from services.auth_service import verify_token
-from services.firebase_service import create_user, get_user_role  # Add get_user_role import
+from services.jwt_middleware import require_auth
+from services.firebase_service import create_user, get_user_role
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -130,6 +131,17 @@ def register():
             "error": "Internal server error",
             "message": "An unexpected error occurred"
         }), 500
+
+
+@auth_bp.route("/auth/role", methods=["GET"])
+@require_auth
+def get_user_role_endpoint(user_id):
+    """Get the role of the authenticated user"""
+    role = get_user_role(user_id)
+    return jsonify({
+        "role": role,
+        "userId": user_id
+    }), 200
 
 
 @auth_bp.route("/user/role", methods=["GET"])

@@ -6,6 +6,7 @@ from routes.avatar_routes import avatar_bp
 from routes.journal_routes import journal_bp
 from routes.reminisce_routes import reminisce_bp
 from routes.insights_routes import insights_bp
+from routes.agent_routes import agent_bp
 
 
 def create_app():
@@ -18,6 +19,7 @@ def create_app():
     app.register_blueprint(journal_bp)
     app.register_blueprint(reminisce_bp)
     app.register_blueprint(insights_bp)
+    app.register_blueprint(agent_bp)
 
 
     
