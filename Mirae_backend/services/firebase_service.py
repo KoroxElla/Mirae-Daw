@@ -121,7 +121,11 @@ def update_user_role(user_id, new_role):
 def save_entry(user_id, text, weights, arbitration):
 
     encrypted_text = encrypt_text(text)
-    primary_emotion = arbitration["emotions"]
+    primary_emotion = (
+        arbitration["emotions"][0]
+        if isinstance(arbitration["emotions"], list) and len(arbitration["emotions"]) > 0
+        else "neutral"
+    )
     category = get_category(primary_emotion)
 
     db.collection("users")\
