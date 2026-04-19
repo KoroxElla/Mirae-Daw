@@ -7,7 +7,7 @@
  */
 export const decryptText = async (encryptedToken: string): Promise<string> => {
   try {
-    const response = await fetch('http://localhost:5000/journal/decrypt', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/decrypt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
