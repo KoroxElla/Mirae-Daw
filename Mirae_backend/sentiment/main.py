@@ -68,10 +68,14 @@ def analyze_text(text: str) -> dict:
     # Normal successful response
     result = data[0]
 
+    if isinstance(result, list) and len(result) > 0 and isinstance(result[0], list):
+        result = result[0]
+
     weights = {
         item["label"]: item["score"]
         for item in result
     }
+    
 
     # find strongest emotion
     primary_emotion = max(weights, key=weights.get)
