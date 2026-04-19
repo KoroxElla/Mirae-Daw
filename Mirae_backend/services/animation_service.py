@@ -15,26 +15,6 @@ EMOTION_TO_ANIMATION = {
     "neutral": "idle.fbx"
 }
 
-DECAY_FACTOR = 0.6
-
-def arbitrate_emotion(weights: dict):
-    """
-    Full emotional arbitration logic.
-    Returns:
-        {
-            "mode": "single" | "loop",
-            "emotions": [list],
-            "animations": [list]
-        }
-    """
-
-    if not weights:
-        return {
-            "mode": "single",
-            "emotions": ["neutral"],
-            "animations": ["idle.fbx"]
-        }
-
 
 DECAY_FACTOR = 0.6
 
