@@ -1,8 +1,6 @@
 EMOTION_CLASSES = {
     "positive": {"joy",  "surprise"},
     "negative": {"anger", "sadness", "fear", "disgust"},
-    "positive": {"joy", "trust", "anticipation", "positive", "surprise"},
-    "negative": {"anger", "sadness", "fear", "disgust", "negative"},
     "neutral": {"neutral"}
 }
 
