@@ -6,13 +6,10 @@ import os
 # LOAD MODEL
 # -------------------------------------------------
 
-HF_API_KEY = os.getenv("HF_API_KEY")
 
 MODEL_URL = "https://api-inference.huggingface.co/models/j-hartmann/emotion-english-distilroberta-base"
 
-headers = {
-    "Authorization": f"Bearer {HF_API_KEY}"
-}
+
 
 
 # -------------------------------------------------
@@ -34,6 +31,14 @@ EMOTION_TO_ANIMATION = {
 # -------------------------------------------------
 
 def analyze_text(text: str) -> dict:
+    HF_API_KEY = os.getenv("HF_API_KEY")
+
+    if not HF_API_KEY:
+        raise ValueError("HF_API_KEY missing")
+
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY.strip()}"
+    }
     """
     Takes raw journal text.
     Returns emotion weights dictionary for avatar animation.
