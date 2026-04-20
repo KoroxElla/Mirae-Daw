@@ -65,9 +65,9 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         setUserRole(data.role);
-        setUserId(data.userId);
+        setUserId(data.uid);
         localStorage.setItem("userRole", data.role);
-        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("userId", data.uid);
         setIsAuthenticated(true);
       } else {
         throw new Error('Failed to fetch role');
