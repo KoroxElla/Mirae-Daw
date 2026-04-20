@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAt: string;
+  journalCount: number;
+  chatCount: number;
+}
 
 interface ProfilePageProps {
   userId: string;
@@ -8,219 +16,102 @@ interface ProfilePageProps {
 }
 
 export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
-  const [username, setUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [musicVolume, setMusicVolume] = useState(0.5);
-  const [isMusicEnabled, setIsMusicEnabled] = useState(true);
-  const [tokenAmount, setTokenAmount] = useState(0);
-  const [accessibilityMode, setAccessibilityMode] = useState<'default' | 'high-contrast' | 'large-text'>('default');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load saved settings
   useEffect(() => {
-    const savedUsername = localStorage.getItem(`username_${userId}`);
-    const savedVolume = localStorage.getItem(`musicVolume_${userId}`);
-    const savedMusicEnabled = localStorage.getItem(`musicEnabled_${userId}`);
-    const savedAccessibility = localStorage.getItem(`accessibility_${userId}`);
-    
-    if (savedUsername) setUsername(savedUsername);
-    if (savedVolume) setMusicVolume(parseFloat(savedVolume));
-    if (savedMusicEnabled) setIsMusicEnabled(savedMusicEnabled === 'true');
-    if (savedAccessibility) setAccessibilityMode(savedAccessibility as any);
+    loadProfile();
   }, [userId]);
 
-  const handleUpdateUsername = async () => {
+  const loadProfile = async () => {
+    // First try to load from localStorage
+    const cachedProfile = localStorage.getItem(`user_profile_${userId}`);
+    if (cachedProfile) {
+      setProfile(JSON.parse(cachedProfile));
+    }
+
     try {
-      // Update in backend
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/update`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ displayName: username }),
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
-        localStorage.setItem(`username_${userId}`, username);
-        alert('Username updated successfully!');
+        const data = await response.json();
+        setProfile(data);
+        // Cache profile data
+        localStorage.setItem(`user_profile_${userId}`, JSON.stringify(data));
       }
     } catch (error) {
-      console.error('Error updating username:', error);
+      console.error('Error fetching profile:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleUpdatePassword = async () => {
-    const user = auth.currentUser;
-    if (!user || !user.email) return;
-
-    try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
-      alert('Password updated successfully!');
-      setNewPassword('');
-      setCurrentPassword('');
-    } catch (error) {
-      alert('Failed to update password. Check your current password.');
-    }
-  };
-
-  const handleIssueTokens = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/issue-token`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      const data = await response.json();
-      setTokenAmount(data.tokens || 0);
-      alert(`Issued ${data.issued || 10} tokens! Total: ${data.tokens}`);
-    } catch (error) {
-      console.error('Error issuing tokens:', error);
-    }
-  };
-
-  const handleMusicChange = (volume: number) => {
-    setMusicVolume(volume);
-    localStorage.setItem(`musicVolume_${userId}`, volume.toString());
-    // Dispatch event for music player
-    window.dispatchEvent(new CustomEvent('musicVolumeChange', { detail: { volume, enabled: isMusicEnabled } }));
-  };
-
-  const handleAccessibilityChange = (mode: typeof accessibilityMode) => {
-    setAccessibilityMode(mode);
-    localStorage.setItem(`accessibility_${userId}`, mode);
-    document.body.className = mode === 'high-contrast' ? 'high-contrast' : mode === 'large-text' ? 'large-text' : '';
-  };
+  if (isLoading && !profile) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Profile Settings</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-2xl font-bold">My Profile</h2>
+              <p className="opacity-90 text-sm">{profile?.email}</p>
+            </div>
+            <button onClick={onClose} className="text-white text-2xl">✕</button>
+          </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Username Section */}
-          <div className="border-b pb-4">
-            <h3 className="text-lg font-semibold mb-3">Account Details</h3>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
-                className="flex-1 border rounded-lg p-2"
-              />
-              <button
-                onClick={handleUpdateUsername}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg"
-              >
-                Update
-              </button>
+        {/* Content */}
+        <div className="p-6">
+          {/* Avatar Placeholder */}
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-4xl shadow-lg">
+              {profile?.displayName?.charAt(0) || '👤'}
             </div>
           </div>
 
-          {/* Password Change */}
-          <div className="border-b pb-4">
-            <h3 className="text-lg font-semibold mb-3">Change Password</h3>
-            <div className="space-y-2">
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Current Password"
-                className="w-full border rounded-lg p-2"
-              />
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) =>setNewPassword(e.target.value)}
-                placeholder="New Password"
-                className="w-full border rounded-lg p-2"
-              />
-              <button
-                onClick={handleUpdatePassword}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-              >
-                Change Password
-              </button>
+          {/* User Info */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold">Display Name</label>
+              <p className="text-lg font-semibold">{profile?.displayName || 'Not set'}</p>
             </div>
-          </div>
 
-          {/* Theme Music */}
-          <div className="border-b pb-4">
-            <h3 className="text-lg font-semibold mb-3">Theme Music</h3>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={isMusicEnabled}
-                  onChange={(e) => {
-                    setIsMusicEnabled(e.target.checked);
-                    localStorage.setItem(`musicEnabled_${userId}`, e.target.checked.toString());
-                    window.dispatchEvent(new CustomEvent('musicVolumeChange', { 
-                      detail: { volume: musicVolume, enabled: e.target.checked } 
-                    }));
-                  }}
-                />
-                Enable Background Music
-              </label>
-              <div>
-                <label className="block text-sm mb-1">Volume: {Math.round(musicVolume * 100)}%</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={musicVolume}
-                  onChange={(e) => handleMusicChange(parseFloat(e.target.value))}
-                  className="w-full"
-                />
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold">Account Type</label>
+              <p className="text-lg capitalize">
+                {profile?.role === 'agent' ? '🔧 Agent / Admin' : '👤 Regular User'}
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold">Member Since</label>
+              <p className="text-lg">{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}</p>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{profile?.journalCount || 0}</p>
+                  <p className="text-xs text-gray-500">Journal Entries</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{profile?.chatCount || 0}</p>
+                  <p className="text-xs text-gray-500">Chat Sessions</p>
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Accessibility */}
-          <div className="border-b pb-4">
-            <h3 className="text-lg font-semibold mb-3">Accessibility</h3>
-            <div className="flex gap-2">
-              {(['default', 'high-contrast', 'large-text'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => handleAccessibilityChange(mode)}
-                  className={`px-4 py-2 rounded-lg capitalize ${
-                    accessibilityMode === mode
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {mode.replace('-', ' ')}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Agent Tokens */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Agent Tokens</h3>
-            <div className="flex items-center gap-4">
-              <div className="flex-1 bg-gray-100 rounded-lg p-3 text-center">
-                <p className="text-sm text-gray-600">Available Tokens</p>
-                <p className="text-2xl font-bold text-purple-600">{tokenAmount}</p>
-              </div>
-              <button
-                onClick={handleIssueTokens}
-                className="bg-green-600 text-white px-6 py-3 rounded-lg"
-              >
-                Issue New Tokens
-              </button>
             </div>
           </div>
         </div>

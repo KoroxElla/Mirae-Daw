@@ -1,84 +1,125 @@
 import React, { useState, useEffect } from "react";
 import Homepage from "./components/Homepage";
 import MainPage from "./components/MainPage";
-import AvatarCustomizer from "./components/AvatarCustomizer";
+import AgentDashboard from './pages/AgentDashboard';
 import { AvatarProvider } from './contexts/AvatarContext';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPage, setCurrentPage] = useState<
-    "main" | "customizer"
-  >("main");
-
-  const [avatarData, setAvatarData] = useState<any>(null);
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
+  const [userRole, setUserRole] = useState<'user' | 'agent' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAvatar = async () => {
+    const checkAuthAndRole = async () => {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      
+      if (!token) {
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/avatar/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      try {
+        // Verify token and get role from backend
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-      const data = await res.json();
-
-      if (res.ok && data.avatarUrl) {
-        setAvatarData({ avatarUrl: data.avatarUrl });
+        if (response.ok) {
+          const data = await response.json();
+          setUserRole(data.role);
+          setUserId(data.userId);
+          setIsAuthenticated(true);
+          
+          // Cache role and userId
+          localStorage.setItem("userRole", data.role);
+          localStorage.setItem("userId", data.userId);
+        } else {
+          // Token invalid - clear storage
+          localStorage.removeItem("token");
+          localStorage.removeItem("userRole");
+          localStorage.removeItem("userId");
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth verification error:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (isAuthenticated) {
-      fetchAvatar();
+    checkAuthAndRole();
+  }, []);
+
+  const handleAuthSuccess = async () => {
+    // After successful login, fetch user role
+    const token = localStorage.getItem("token");
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/role`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role);
+        setUserId(data.userId);
+        localStorage.setItem("userRole", data.role);
+        localStorage.setItem("userId", data.userId);
+        setIsAuthenticated(true);
+      } else {
+        throw new Error('Failed to fetch role');
+      }
+    } catch (error) {
+      console.error('Error fetching role:', error);
+      // Fallback: try to get from localStorage
+      const cachedRole = localStorage.getItem("userRole");
+      const cachedUserId = localStorage.getItem("userId");
+      if (cachedRole && cachedUserId) {
+        setUserRole(cachedRole as 'user' | 'agent');
+        setUserId(cachedUserId);
+        setIsAuthenticated(true);
+      }
     }
-  }, [isAuthenticated]);
+  };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    setIsAuthenticated(false);
+    setUserRole(null);
+    setUserId(null);
+  };
 
-  // 1️⃣ If NOT logged in → show Homepage (with modal login)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  // Not logged in
   if (!isAuthenticated) {
-    return (
-      <Homepage
-        onAuthSuccess={() => setIsAuthenticated(true)}
-      />
-    );
+    return <Homepage onAuthSuccess={handleAuthSuccess} />;
   }
 
-  // 2️⃣ If user clicks customize avatar
-  if (currentPage === "customizer") {
-    return (
-      <AvatarCustomizer
-        onSave={(data) => {
-          setAvatarData(data);
-          setCurrentPage("main");
-        }}
-        onClose={() => setCurrentPage("main")}
-      />
-    );
+  // Agent logged in - redirect to Agent Dashboard
+  if (userRole === 'agent') {
+    return <AgentDashboard agentId={userId || ''} />;
   }
 
-  // 3️⃣ Default after login → MainPage
+  // Regular user - redirect to MainPage
   return (
     <AvatarProvider>
-    <MainPage
-      avatarData={avatarData}
-      onCustomize={() => setCurrentPage("customizer")}
-      onLogout={() => {
-        localStorage.removeItem("token");
-        setAvatarData(null);
-        setIsAuthenticated(false);
-      }}
-
-    />
-   </AvatarProvider>
+      <MainPage
+        avatarData={null}
+        onCustomize={() => {}}
+        onLogout={handleLogout}
+      />
+    </AvatarProvider>
   );
 }
-

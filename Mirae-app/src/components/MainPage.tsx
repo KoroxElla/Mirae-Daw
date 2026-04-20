@@ -4,6 +4,7 @@ import { Avatar } from "./Avatar";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import JournalBook from "./journal/JournalBook";
 import ReminiscePage from "./ReminiscePage"; 
+import SettingsPage from './SettingsPage';
 import ProfilePage from './ProfilePage';
 import AvatarScene from "./AvatarScene";
 import ChatPage from "./ChatPage";
@@ -32,6 +33,7 @@ export default function MainPage({
   const [currentSceneUrl, setCurrentSceneUrl] = useState<string>("");
   const [currentEmotion, setCurrentEmotion] = useState<string>("neutral");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   
   // Use ref to track if we've already set initial scene
   const initialSceneSetRef = useRef(false);
@@ -163,7 +165,7 @@ export default function MainPage({
             src="/main_icons/Settings.png"
             className="w-6 h-6 cursor-pointer hover:scale-110 transition-transform"
             alt="settings"
-            onClick={() => setShowProfile(true)}
+            onClick={() => setShowSettings(true)}
           />
           <button onClick={onLogout} className="text-sm bg-gray-200 px-3 py-1 rounded-full hover:bg-gray-300 transition-colors">
             Logout
@@ -171,6 +173,9 @@ export default function MainPage({
         </div>
         {showProfile && (
           <ProfilePage userId={userId || ''} onClose={() => setShowProfile(false)} />
+        )}
+        {showSettings && (
+          <SettingsPage userId={userId || ''} onClose={() => setShowSettings(false)} />
         )}
       </div>
 
