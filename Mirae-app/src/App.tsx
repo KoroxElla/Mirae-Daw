@@ -22,7 +22,7 @@ export default function App() {
 
       try {
         // Verify token and get role from backend
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -58,7 +58,7 @@ export default function App() {
     const token = localStorage.getItem("token");
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/role`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
