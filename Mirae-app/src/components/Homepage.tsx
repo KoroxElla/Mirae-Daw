@@ -146,12 +146,11 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
 
       const data = await res.json();
       
-      // Store role temporarily - App.tsx will verify and store properly
       if (data.role) {
         localStorage.setItem("userRole", data.role);
       }
-      if (data.userId) {
-        localStorage.setItem("userId", data.userId);
+      if (data.uid) {
+        localStorage.setItem("userId", data.uid);
       }
 
       return true;
