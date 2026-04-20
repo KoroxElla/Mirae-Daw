@@ -29,12 +29,12 @@ export default function App() {
         if (response.ok) {
           const data = await response.json();
           setUserRole(data.role);
-          setUserId(data.userId);
+          setUserId(data.uid);
           setIsAuthenticated(true);
           
           // Cache role and userId
           localStorage.setItem("userRole", data.role);
-          localStorage.setItem("userId", data.userId);
+          localStorage.setItem("userId", data.uid);
         } else {
           // Token invalid - clear storage
           localStorage.removeItem("token");
