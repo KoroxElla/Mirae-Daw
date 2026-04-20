@@ -81,7 +81,7 @@ def register():
             display_name = data.get("displayName", "")
             
             # Validate role
-            if role not in ["user", "admin"]:
+            if role not in ["user", "agent"]:
                 logger.warning(f"Invalid role '{role}', defaulting to 'user'")
                 role = "user"
         
