@@ -22,19 +22,19 @@ export default function App() {
 
       try {
         // Verify token and get role from backend
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
           const data = await response.json();
           setUserRole(data.role);
-          setUserId(data.userId);
+          setUserId(data.uid);
           setIsAuthenticated(true);
           
           // Cache role and userId
           localStorage.setItem("userRole", data.role);
-          localStorage.setItem("userId", data.userId);
+          localStorage.setItem("userId", data.uid);
         } else {
           // Token invalid - clear storage
           localStorage.removeItem("token");
@@ -58,16 +58,16 @@ export default function App() {
     const token = localStorage.getItem("token");
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/role`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
         const data = await response.json();
         setUserRole(data.role);
-        setUserId(data.userId);
+        setUserId(data.uid);
         localStorage.setItem("userRole", data.role);
-        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("userId", data.uid);
         setIsAuthenticated(true);
       } else {
         throw new Error('Failed to fetch role');

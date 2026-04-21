@@ -1,3 +1,4 @@
+// components/ProfilePage.tsx
 import React, { useState, useEffect } from 'react';
 
 interface UserProfile {
@@ -24,12 +25,6 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
   }, [userId]);
 
   const loadProfile = async () => {
-    // First try to load from localStorage
-    const cachedProfile = localStorage.getItem(`user_profile_${userId}`);
-    if (cachedProfile) {
-      setProfile(JSON.parse(cachedProfile));
-    }
-
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
@@ -41,9 +36,20 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
         setProfile(data);
         // Cache profile data
         localStorage.setItem(`user_profile_${userId}`, JSON.stringify(data));
+      } else {
+        // Try to load from cache
+        const cached = localStorage.getItem(`user_profile_${userId}`);
+        if (cached) {
+          setProfile(JSON.parse(cached));
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      // Try cache as fallback
+      const cached = localStorage.getItem(`user_profile_${userId}`);
+      if (cached) {
+        setProfile(JSON.parse(cached));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +84,7 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
           {/* Avatar Placeholder */}
           <div className="flex justify-center mb-6">
             <div className="w-24 h-24 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-4xl shadow-lg">
-              {profile?.displayName?.charAt(0) || '👤'}
+              {profile?.displayName?.charAt(0)?.toUpperCase() || '👤'}
             </div>
           </div>
 
@@ -90,6 +96,11 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
             </div>
 
             <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold">Email</label>
+              <p className="text-lg">{profile?.email}</p>
+            </div>
+
+            <div>
               <label className="text-xs text-gray-500 uppercase font-semibold">Account Type</label>
               <p className="text-lg capitalize">
                 {profile?.role === 'agent' ? '🔧 Agent / Admin' : '👤 Regular User'}
@@ -98,7 +109,11 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
 
             <div>
               <label className="text-xs text-gray-500 uppercase font-semibold">Member Since</label>
-              <p className="text-lg">{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}</p>
+              <p className="text-lg">{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }) : 'N/A'}</p>
             </div>
 
             <div className="border-t pt-4 mt-4">

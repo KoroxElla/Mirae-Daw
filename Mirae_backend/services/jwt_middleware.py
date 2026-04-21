@@ -14,6 +14,9 @@ def require_auth(f):
 
         if not auth_header or not auth_header.startswith("Bearer "):
             return jsonify({"error": "Authentication required"}), 401
+            
+        if request.method == "OPTIONS":
+            return f(*args, **kwargs)
 
         token = auth_header.split(" ")[1]
 

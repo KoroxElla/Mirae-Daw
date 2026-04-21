@@ -81,7 +81,7 @@ def register():
             display_name = data.get("displayName", "")
             
             # Validate role
-            if role not in ["user", "admin"]:
+            if role not in ["user", "agent"]:
                 logger.warning(f"Invalid role '{role}', defaulting to 'user'")
                 role = "user"
         
@@ -133,9 +133,17 @@ def register():
         }), 500
 
 
-@auth_bp.route("/auth/role", methods=["GET"])
+@auth_bp.route("/auth/role", methods=["GET", "OPTIONS"])
 @require_auth
 def get_user_role_endpoint(user_id):
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "ok"})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        return response, 200
+        
+    user_id = require_auth(lambda uid: uid)()
     """Get the role of the authenticated user"""
     role = get_user_role(user_id)
     return jsonify({

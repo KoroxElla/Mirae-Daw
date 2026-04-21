@@ -63,7 +63,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"user" | "admin">("user");
+  const [selectedRole, setSelectedRole] = useState<"user" | "agent">("user"); // Changed from "admin" to "agent"
   
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -146,13 +146,19 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
 
       const data = await res.json();
       
-      // Store role temporarily - App.tsx will verify and store properly
-      if (data.role) {
-        localStorage.setItem("userRole", data.role);
+      // Handle different response field names
+      const userRole = data.role || data.userRole;
+      const userId = data.userId || data.uid || data.id;
+      
+      if (userRole) {
+        localStorage.setItem("userRole", userRole);
       }
-      if (data.userId) {
-        localStorage.setItem("userId", data.userId);
+      if (userId) {
+        localStorage.setItem("userId", userId);
       }
+      
+      console.log("Backend response:", data);
+      console.log("Stored role:", userRole, "userId:", userId);
 
       return true;
     } catch (err) {
@@ -184,7 +190,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
       
       showToast("Login successful! Redirecting...", "success");
       setTimeout(() => {
-        onAuthSuccess(); // This will trigger App.tsx to verify role and redirect
+        onAuthSuccess();
       }, 1000);
     } catch (error: any) {
       setIsTransitioning(false);
@@ -227,6 +233,9 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
       const userCred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       const token = await userCred.user.getIdToken();
       
+      // Map "agent" role (frontend) to what backend expects
+      const backendRole = selectedRole === "agent" ? "agent" : "user";
+      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
         method: "POST",
         headers: {
@@ -235,7 +244,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
         },
         body: JSON.stringify({
           displayName: displayName || "",
-          role: selectedRole,
+          role: backendRole,
         }),
       });
     
@@ -246,17 +255,21 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
       
       const data = await res.json();
       
-      // Store role temporarily
-      if (data.role) {
-        localStorage.setItem("userRole", data.role);
+      const userRole = data.role || data.userRole;
+      const userId = data.userId || data.uid || data.id;
+      
+      if (userRole) {
+        localStorage.setItem("userRole", userRole);
       }
-      if (data.userId) {
-        localStorage.setItem("userId", data.userId);
+      if (userId) {
+        localStorage.setItem("userId", userId);
       }
       
-      showToast("Account created successfully! Redirecting...", "success");
+      console.log("Signup successful - Role:", userRole, "UserId:", userId);
+      
+      showToast(`Account created successfully as ${selectedRole}! Redirecting...`, "success");
       setTimeout(() => {
-        onAuthSuccess(); // This will trigger App.tsx to verify role and redirect
+        onAuthSuccess();
       }, 1000);
     } catch (error: any) {
       setIsTransitioning(false);
@@ -284,7 +297,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
       
       showToast("Google login successful! Redirecting...", "success");
       setTimeout(() => {
-        onAuthSuccess(); // This will trigger App.tsx to verify role and redirect
+        onAuthSuccess();
       }, 1000);
     } catch (error: any) {
       setIsTransitioning(false);
@@ -303,7 +316,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   } : {
     title: "Sign Up Instructions",
     steps: [
-      "Select your account type: User or Admin",
+      "Select your account type: User or Agent",
       "Choose a display name (2-50 characters)",
       "Use a valid email address",
       "Create a strong password: at least 6 characters, 1 uppercase, 1 number"
@@ -454,7 +467,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
                 <h2 className="text-lg sm:text-xl font-bold mb-4">Sign Up</h2>
 
                 <div className="flex gap-2 mb-4">
-                  {(['user', 'admin'] as const).map((role) => (
+                  {(['user', 'agent'] as const).map((role) => (
                     <button
                       key={role}
                       onClick={() => setSelectedRole(role)}
@@ -464,7 +477,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
                           : 'bg-gray-100 text-gray-600'
                       }`}
                     >
-                      {role === 'user' ? '👤 User' : '🔧 Admin'}
+                      {role === 'user' ? '👤 User' : '🔧 Agent'}
                     </button>
                   ))}
                 </div>
