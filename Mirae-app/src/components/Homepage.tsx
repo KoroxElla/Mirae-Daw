@@ -63,7 +63,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"user" | "agent">("user"); // Changed from "admin" to "agent"
+  const [selectedRole, setSelectedRole] = useState<"user" | "agent">("user"); 
   
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);

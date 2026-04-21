@@ -133,7 +133,7 @@ def get_agent_stats(agent_id):
     total_journals = 0
     total_chats = 0
     emotion_totals = {
-        "joy": 0, "sadness": 0, "anger": 0, "anxiety": 0, "neutral": 0
+            "joy": 0, "sadness": 0, "anger": 0, "disgust": 0, "neutral": 0, "fear": 0, "surprise": 0
     }
     
     # Aggregate stats (limit to first 100 users for performance)
@@ -155,4 +155,40 @@ def get_agent_stats(agent_id):
         "total_chats": total_chats,
         "emotion_distribution": emotion_totals,
         "active_users": len([u for u in users if u.get("createdAt")])
+    }), 200
+
+@agent_bp.route("/verify-token", methods=["POST"])
+def verify_agent_token():
+    """Verify a user's agent token and return user info"""
+    data = request.json
+    token = data.get("token")
+    
+    if not token:
+        return jsonify({"error": "Token required"}), 400
+    
+    # Validate the token
+    scopes, error = validate_agent_token(token)
+    if error:
+        return jsonify({"error": error}), 401
+    
+    # Get the user who created this token
+    from services.agent_service import db
+    token_doc = db.collection("agent_tokens").document(token).get()
+    if not token_doc.exists:
+        return jsonify({"error": "Token not found"}), 404
+    
+    token_data = token_doc.to_dict()
+    user_id = token_data.get("createdBy")
+    
+    # Get user info
+    user = get_user_by_id(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    return jsonify({
+        "userId": user["id"],
+        "email": user["email"],
+        "displayName": user["displayName"],
+        "createdAt": user["createdAt"],
+        "scopes": scopes
     }), 200

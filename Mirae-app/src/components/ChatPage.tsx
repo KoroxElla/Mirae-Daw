@@ -18,13 +18,25 @@ interface ChatSession {
   messages: Message[];
 }
 
-export default function ChatPage({ userId }: { userId: string }) {
+interface ChatPageProps {
+  userId: string;
+  initialEntryId?: string;
+}
+
+const CRISIS_HOTLINES = [
+  { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7 free and confidential support" },
+  { name: "Crisis Text Line", number: "Text HOME to 741741", description: "Free 24/7 crisis counseling" },
+  { name: "SAMHSA Helpline", number: "1-800-662-4357", description: "Treatment referral and information" }
+];
+
+export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [showHotline, setShowHotline] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -59,10 +71,20 @@ export default function ChatPage({ userId }: { userId: string }) {
     };
   }, [userId]);
 
+  useEffect(() => {
+    if (initialEntryId) {
+      startNewChat(initialEntryId);
+    }
+  }, [initialEntryId]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [activeSession?.messages]);
+
   const loadChatSessions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/chat/sessions', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -77,7 +99,7 @@ export default function ChatPage({ userId }: { userId: string }) {
   const startNewChat = async (linkedEntryId?: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/chat/sessions', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +137,7 @@ export default function ChatPage({ userId }: { userId: string }) {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/chat/message', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +165,9 @@ export default function ChatPage({ userId }: { userId: string }) {
         
         // Check if message indicates crisis
         if (data.isCrisis) {
-          showCrisisHotline();
+          setShowHotline(true);
+          // Auto-hide after 10 seconds
+          setTimeout(() => setShowHotline(false), 10000);
         }
       }
     } catch (error) {
@@ -151,10 +175,6 @@ export default function ChatPage({ userId }: { userId: string }) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const showCrisisHotline = () => {
-    alert("We're here for you. Please reach out:\n\n988 - Suicide & Crisis Lifeline\nCrisis Text Line: Text HOME to 741741");
   };
 
   const startVoiceInput = () => {
@@ -168,13 +188,9 @@ export default function ChatPage({ userId }: { userId: string }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [activeSession?.messages]);
-
   return (
-    <div className="flex h-[80vh] bg-gray-100 rounded-xl overflow-hidden">
-      {/* Sidebar - Chat Sessions */}
+    <div className="flex h-[80vh] bg-gray-100 rounded-xl overflow-hidden relative">
+      {/* Sidebar */}
       <div className="w-80 bg-white border-r flex flex-col">
         <div className="p-4 border-b">
           <button
@@ -202,15 +218,7 @@ export default function ChatPage({ userId }: { userId: string }) {
                   </p>
                 </div>
                 {session.linkedEntryId && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Navigate to journal entry
-                    }}
-                    className="text-xs text-purple-600 hover:underline"
-                  >
-                    📖 View Entry
-                  </button>
+                  <span className="text-xs text-purple-600">📖</span>
                 )}
               </div>
             </div>
@@ -222,34 +230,13 @@ export default function ChatPage({ userId }: { userId: string }) {
       <div className="flex-1 flex flex-col">
         {activeSession ? (
           <>
-            {/* Chat Header */}
-            <div className="p-4 bg-white border-b flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold">{activeSession.title}</h3>
-                {activeSession.linkedEntryId && (
-                  <button
-                    onClick={() => {
-                      // Navigate to journal entry
-                    }}
-                    className="text-sm text-purple-600 hover:underline"
-                  >
-                    ← Back to Journal Entry
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsVoiceMode(!isVoiceMode)}
-                  className={`p-2 rounded-full transition ${
-                    isVoiceMode ? 'bg-purple-600 text-white' : 'bg-gray-200'
-                  }`}
-                >
-                  🎤
-                </button>
-              </div>
+            <div className="p-4 bg-white border-b">
+              <h3 className="font-semibold">{activeSession.title}</h3>
+              {activeSession.linkedEntryId && (
+                <p className="text-xs text-purple-600">Linked to journal entry</p>
+              )}
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {activeSession.messages.map(message => (
                 <div
@@ -284,7 +271,6 @@ export default function ChatPage({ userId }: { userId: string }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
             <div className="p-4 bg-white border-t">
               <div className="flex gap-2">
                 {isVoiceMode ? (
@@ -314,6 +300,12 @@ export default function ChatPage({ userId }: { userId: string }) {
                     >
                       Send
                     </button>
+                    <button
+                      onClick={() => setIsVoiceMode(!isVoiceMode)}
+                      className="p-2 rounded-full bg-gray-200 hover:bg-gray-300"
+                    >
+                      🎤
+                    </button>
                   </>
                 )}
               </div>
@@ -337,6 +329,44 @@ export default function ChatPage({ userId }: { userId: string }) {
           </div>
         )}
       </div>
+
+      {/* Crisis Hotline Modal */}
+      {showHotline && (
+        <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
+          <div className="bg-red-500 text-white rounded-lg shadow-xl p-4 max-w-sm">
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="font-bold">⚠️ Need Support?</h4>
+              <button onClick={() => setShowHotline(false)} className="text-white">✕</button>
+            </div>
+            <p className="text-sm mb-3">You're not alone. Help is available 24/7:</p>
+            <div className="space-y-2">
+              {CRISIS_HOTLINES.map(hotline => (
+                <div key={hotline.number} className="bg-white/20 rounded p-2">
+                  <p className="font-semibold text-sm">{hotline.name}</p>
+                  <p className="text-sm">{hotline.number}</p>
+                  <p className="text-xs opacity-90">{hotline.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
