@@ -24,11 +24,10 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
       if (isEncrypted(entry.text)) {
         setIsDecrypting(true);
         setDecryptError(null);
-        
     };
 
     loadDecryptedText();
-  }, [entry]);
+  }, [entry];
 
   const formatDate = (date: Date) => {
     if (!date) return '';
