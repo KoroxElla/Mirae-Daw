@@ -2,7 +2,6 @@ import os
 import json
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
-from flask import current_app
 from datetime import datetime
 from typing import List, Dict, Tuple
 
@@ -35,7 +34,6 @@ CRISIS PROTOCOL - If the user expresses ANY of the following, set isCrisis=true:
 
 Remember: You are here to support, listen, and provide wellness resources when appropriate. Be warm, empathetic, and conversational."""
 
-
 def detect_out_of_scope(text: str) -> bool:
     blocked_topics = [
         "politics", "government", "election",
@@ -44,9 +42,16 @@ def detect_out_of_scope(text: str) -> bool:
     text_lower = text.lower()
     return any(word in text_lower for word in blocked_topics)
 
+def detect_medical_question(text: str) -> bool:
+    keywords = [
+        "diagnosed", "mental illness", "depression treatment",
+        "anxiety disorder", "therapy", "medication", "bipolar"
+    ]
+    text_lower = text.lower()
+    return any(word in text_lower for word in keywords)
+
 class GeminiChatSession:
     def __init__(self, session_id: str, user_id: str):
-
         self.session_id = session_id
         self.user_id = user_id
         self.chat_history: List[Dict] = []
@@ -102,18 +107,22 @@ class GeminiChatSession:
     
     def send_message(self, user_message: str) -> Tuple[str, bool, bool]:
         """Send a message and get response with crisis detection"""
+        # Check for out of scope topics first
         if detect_out_of_scope(user_message):
-          return (
-              "I've noticed that the statements you've made tend to be delving into a sensitive topic that my coding is restricting me to converse in, so I would suggest we redirect this conversation. How are you feeling about your day today?",
-              False,
-              True
-          )
-          if detect_medical_question(user_message):
             return (
-                "I’m really glad you reached out...",
+                "I've noticed that the statements you've made tend to be delving into a sensitive topic that my coding is restricting me to converse in, so I would suggest we redirect this conversation. How are you feeling about your day today?",
                 False,
                 True
-    )
+            )
+        
+        # Check for medical questions
+        if detect_medical_question(user_message):
+            return (
+                "I'm really glad you reached out, but I'm not a medical professional and can't provide medical advice. I encourage you to speak with a qualified healthcare provider who can give you proper guidance. Would you like to talk about how you're feeling instead?",
+                False,
+                True
+            )
+        
         try:
             # Add user message to history
             self.add_message("user", user_message)
@@ -191,14 +200,6 @@ Keep your response warm, helpful, and within wellness support boundaries."""
             "last_message_time": self.chat_history[-1]["timestamp"].isoformat() if self.chat_history else None
         }
 
-    def detect_medical_question(self, text: str) -> bool:
-      keywords = [
-          "diagnosed", "mental illness", "depression treatment",
-          "anxiety disorder", "therapy", "medication", "bipolar"
-      ]
-      text_lower = text.lower()
-      return any(word in text_lower for word in keywords)
-
 # Store active chat sessions in memory (in production, use Redis/Database)
 active_sessions: Dict[str, GeminiChatSession] = {}
 
@@ -215,7 +216,6 @@ def get_or_create_chat_session(session_id: str, user_id: str) -> GeminiChatSessi
 def save_chat_session_to_db(session_id: str, user_id: str, messages: List[Dict]):
     """Save chat session to Firestore for persistence"""
     from services.firebase_service import db
-    from datetime import datetime
     
     chat_ref = db.collection("users").document(user_id).collection("chats").document(session_id)
     
@@ -226,5 +226,3 @@ def save_chat_session_to_db(session_id: str, user_id: str, messages: List[Dict])
         "updated_at": datetime.utcnow(),
         "created_at": active_sessions.get(session_id, {}).created_at if session_id in active_sessions else datetime.utcnow()
     })
-
-
