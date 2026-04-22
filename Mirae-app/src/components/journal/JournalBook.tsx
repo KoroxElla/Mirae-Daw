@@ -154,20 +154,26 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
           emotions: result.emotions
         });
         
-        // Show chat suggestion if emotion is neutral
-        if (result.mode === 'single' && result.emotions[0] === 'neutral') {
-          setShowChatSuggestion(true);
-          setLastNeutralEntryId(result.entryId || entries[0]?.id);
-          
-          // Auto-hide after 30 seconds
-          setTimeout(() => {
-            setShowChatSuggestion(false);
-          }, 30000);
-        }
       }
+
+      const isNeutral =
+        result.mode === 'single'
+          ? result.emotions[0] === 'neutral'
+          : result.emotions.includes('neutral');
       
       const updatedEntries = await fetchAllEntries();
       setEntries(updatedEntries);
+
+      const newest = updatedEntries[0];
+
+      if (isNeutral && newest) {
+        setShowChatSuggestion(true);
+        setLastNeutralEntryId(newest.id);
+
+        setTimeout(() => {
+          setShowChatSuggestion(false);
+        }, 30000);
+      }
       
       setIsEditing(false);
       setEditingEntry(null);

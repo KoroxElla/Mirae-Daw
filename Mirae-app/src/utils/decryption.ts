@@ -35,7 +35,7 @@ export const decryptText = async (encryptedToken: string): Promise<string> => {
  * @returns boolean - True if the text appears encrypted
  */
 export const isEncrypted = (text: string): boolean => {
-  return text.startsWith('gAAAAA');
+  return typeof text === 'string' && text.length > 50 && text.includes('.');
 };
 
 /**

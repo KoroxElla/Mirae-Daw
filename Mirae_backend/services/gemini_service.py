@@ -1,4 +1,3 @@
-# services/gemini_service.py
 import os
 import json
 import google.generativeai as genai
@@ -36,8 +35,18 @@ CRISIS PROTOCOL - If the user expresses ANY of the following, set isCrisis=true:
 
 Remember: You are here to support, listen, and provide wellness resources when appropriate. Be warm, empathetic, and conversational."""
 
+
+def detect_out_of_scope(text: str) -> bool:
+    blocked_topics = [
+        "politics", "government", "election",
+        "religion", "god", "church", "islam", "christianity"
+    ]
+    text_lower = text.lower()
+    return any(word in text_lower for word in blocked_topics)
+
 class GeminiChatSession:
     def __init__(self, session_id: str, user_id: str):
+
         self.session_id = session_id
         self.user_id = user_id
         self.chat_history: List[Dict] = []
@@ -91,8 +100,20 @@ class GeminiChatSession:
         text_lower = text.lower()
         return any(keyword in text_lower for keyword in crisis_keywords)
     
-    async def send_message(self, user_message: str) -> Tuple[str, bool, bool]:
+    def send_message(self, user_message: str) -> Tuple[str, bool, bool]:
         """Send a message and get response with crisis detection"""
+        if detect_out_of_scope(user_message):
+          return (
+              "I've noticed that the statements you've made tend to be delving into a sensitive topic that my coding is restricting me to converse in, so I would suggest we redirect this conversation. How are you feeling about your day today?",
+              False,
+              True
+          )
+          if detect_medical_question(user_message):
+            return (
+                "I’m really glad you reached out...",
+                False,
+                True
+    )
         try:
             # Add user message to history
             self.add_message("user", user_message)
@@ -170,6 +191,14 @@ Keep your response warm, helpful, and within wellness support boundaries."""
             "last_message_time": self.chat_history[-1]["timestamp"].isoformat() if self.chat_history else None
         }
 
+    def detect_medical_question(self, text: str) -> bool:
+      keywords = [
+          "diagnosed", "mental illness", "depression treatment",
+          "anxiety disorder", "therapy", "medication", "bipolar"
+      ]
+      text_lower = text.lower()
+      return any(word in text_lower for word in keywords)
+
 # Store active chat sessions in memory (in production, use Redis/Database)
 active_sessions: Dict[str, GeminiChatSession] = {}
 
@@ -197,3 +226,5 @@ def save_chat_session_to_db(session_id: str, user_id: str, messages: List[Dict])
         "updated_at": datetime.utcnow(),
         "created_at": active_sessions.get(session_id, {}).created_at if session_id in active_sessions else datetime.utcnow()
     })
+
+

@@ -21,7 +21,7 @@ const JournalCover: React.FC<Props> = ({ cover, onSwitchCover, journalName }) =>
       <img 
         src={getCoverImage(cover)} 
         alt="Journal Cover" 
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover block"
       />
       <h1 className="absolute bottom-12 left-0 right-0 text-center text-white text-4xl font-comic drop-shadow-lg">
         {journalName}

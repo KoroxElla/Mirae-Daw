@@ -25,19 +25,6 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
         setIsDecrypting(true);
         setDecryptError(null);
         
-        try {
-          const decrypted = await decryptText(entry.text);
-          setDisplayText(decrypted);
-        } catch (error) {
-          console.error('Failed to decrypt entry:', error);
-          setDecryptError('Could not decrypt this entry');
-          setDisplayText('[Encrypted Content]');
-        } finally {
-          setIsDecrypting(false);
-        }
-      } else {
-        setDisplayText(entry.text);
-      }
     };
 
     loadDecryptedText();
@@ -63,7 +50,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
 
   return (
     <motion.div 
-      className="w-full h-full bg-amber-50 bg-[url('/journal/openjournal.png')] bg-cover bg-center rounded-[10px] shadow-md relative font-comic overflow-hidden"
+      className="w-full h-full bg-amber-50 bg-[url('/journal/openjournal.png')] bg-cover bg-center rounded-[10px] shadow-md relative font-comic overflow-hidden md:overflow-visible"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
