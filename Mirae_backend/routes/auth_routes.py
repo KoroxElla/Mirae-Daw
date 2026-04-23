@@ -90,22 +90,37 @@ def register():
         # 5. Create user in Firestore with role
         try:
             logger.info(f"📝 Creating Firestore user: {uid} ({email}) with role {role}")
-            create_user(uid, email, display_name, role)  # Now passing role parameter
+            create_user(
+                user_id=uid, 
+                email=email, 
+                password_hash=None,  # Firebase handles auth
+                display_name=display_name, 
+                role=role  
+            )
             logger.info(f"✅ User {uid} created in Firestore with role {role}")
             
         except Exception as firestore_error:
             logger.error(f"❌ Firestore creation failed: {str(firestore_error)}")
             
             # Check if user already exists
-            if "already exists" in str(firestore_error).lower():
+            error_str = str(firestore_error).lower()
+            if "already exists" in error_str or "document already exists" in error_str:
                 # Get existing user's role
                 existing_role = get_user_role(uid)
+                logger.info(f"📋 User already exists with role: {existing_role}")
+                
+                
+                if existing_role != role and role == "agent":
+                    logger.info(f"🔄 Updating user {uid} role from {existing_role} to {role}")
+                    update_user_role(uid, role)
+                    existing_role = role
+                
                 return jsonify({
                     "status": "already_exists",
                     "uid": uid,
                     "email": email,
                     "role": existing_role,
-                    "message": "User already registered in Firestore"
+                    "message": f"User already registered in Firestore as {existing_role}"
                 }), 200
             else:
                 return jsonify({
