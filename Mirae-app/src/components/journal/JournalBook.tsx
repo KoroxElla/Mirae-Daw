@@ -267,7 +267,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       </div>
 
       {/* Book Container - Centered and Responsive */}
-      <div className="flex justify-center items-center">
+      <div className="flex justify-center items-center py-4">
         <div style={{ width: bookDimensions.width, height: bookDimensions.height }}>
           <HTMLFlipBook 
             width={bookDimensions.width}
@@ -323,10 +323,10 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       </div>
 
       {/* Navigation Buttons - Responsive */}
-      <div className="flex justify-center items-center gap-3 sm:gap-5 mt-5">
+      <div className="flex justify-center items-center gap-3 sm:gap-5 mt-5 mb-8 pb-4">
         <button 
           onClick={prevPage}
-          className="px-3 sm:px-5 py-1.5 sm:py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base"
+          className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base shadow-md"
         >
           ← Previous
         </button>
@@ -335,7 +335,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
         </span>
         <button 
           onClick={nextPage}
-          className="px-3 sm:px-5 py-1.5 sm:py-2.5 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base"
+          className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base shadow-md"
         >
           Next →
         </button>
