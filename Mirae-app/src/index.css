@@ -191,3 +191,46 @@
   border-radius: 12px;
   white-space: nowrap;
 }
+
+/* Ensure journal pages are visible */
+.page {
+  background: transparent !important;
+}
+
+.page-content {
+  background: transparent !important;
+  height: 100%;
+  width: 100%;
+}
+
+/* Fix flip book container */
+.flip-book {
+  margin: 0 auto;
+}
+
+/* Ensure journal text is readable */
+.font-comic {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive;
+}
+
+/* Responsive adjustments for journal */
+@media (max-width: 768px) {
+  .page-content {
+    padding: 8px !important;
+  }
+  
+  .journal-header input {
+    font-size: 1rem;
+  }
+}
+
+/* Ensure navigation buttons are always visible */
+.fixed-nav-buttons {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 12px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
