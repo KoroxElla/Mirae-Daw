@@ -323,22 +323,24 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       </div>
 
       {/* Navigation Buttons - Responsive */}
-      <div className="flex justify-center items-center gap-3 sm:gap-5 mt-5 mb-8 pb-4">
-        <button 
-          onClick={prevPage}
-          className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base shadow-md"
-        >
-          ← Previous
-        </button>
-        <span className="text-xs sm:text-sm text-gray-600 px-2 sm:px-4">
-          {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-        </span>
-        <button 
-          onClick={nextPage}
-          className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base shadow-md"
-        >
-          Next →
-        </button>
+      <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm rounded-t-xl shadow-lg mt-4 z-30">
+        <div className="flex justify-center items-center gap-3 sm:gap-5 mt-5 mb-8 pb-4">
+          <button 
+            onClick={prevPage}
+            className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base shadow-md"
+          >
+            ← Previous
+          </button>
+          <span className="text-xs sm:text-sm text-gray-600 px-2 sm:px-4">
+            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+          </span>
+          <button 
+            onClick={nextPage}
+            className="px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all text-sm sm:text-base shadow-md"
+          >
+            Next →
+          </button>
+        </div>
       </div>
 
       {/* Editor Modal */}
