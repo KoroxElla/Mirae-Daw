@@ -101,6 +101,15 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
         </div>
       </div>
 
+      {entry.primaryEmotion === "neutral" && (
+        <button
+          onClick={() => navigate(`/chat?entryId=${entry.id}`)}
+          className="fixed bottom-6 right-6 bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:scale-105 transition"
+        >
+          💬 Wanna talk?
+        </button>
+      )}
+
       {/* Page Actions - Fixed at bottom with better positioning */}
       <div className="absolute bottom-3 right-3 flex gap-2 z-20">
         <button 

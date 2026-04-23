@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  linkedEntryId?: string;
 }
 
 interface ChatSession {
@@ -20,427 +19,272 @@ interface ChatSession {
 
 interface ChatPageProps {
   userId: string;
-  initialEntryId?: string;
 }
 
-const CRISIS_HOTLINES = [
-  { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7 free and confidential support" },
-  { name: "Crisis Text Line", number: "Text HOME to 741741", description: "Free 24/7 crisis counseling" },
-  { name: "SAMHSA Helpline", number: "1-800-662-4357", description: "Treatment referral and information" }
-];
-
-export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
+export default function ChatPage({ userId }: ChatPageProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showHotline, setShowHotline] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const [showHotline, setShowHotline] = useState(false);
+  const [params] = useSearchParams();
+  const entryId = params.get("entryId");
 
-  // Load chat sessions
+  const recognitionRef = useRef<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 🎤 Voice setup
   useEffect(() => {
-    loadChatSessions();
-    
-    // Initialize voice recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
-      
+
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        setInputMessage(transcript);
         setIsRecording(false);
         handleSendMessage(transcript);
       };
-      
-      recognitionRef.current.onerror = () => {
-        setIsRecording(false);
-      };
+
+      recognitionRef.current.onerror = () => setIsRecording(false);
     }
-    
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, [userId]);
+  }, []);
+
+  // 📥 Load sessions
+  useEffect(() => {
+    loadSessions();
+  }, []);
 
   useEffect(() => {
-    if (initialEntryId) {
-      startNewChat(initialEntryId);
+    if (entryId) {
+      startChatWithEntry(entryId);
     }
-  }, [initialEntryId]);
+  }, [entryId]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [activeSession?.messages]);
-
-  const loadChatSessions = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // Ensure each session has a messages array
-        const sessionsWithMessages = data.map((session: any) => ({
-          ...session,
-          messages: session.messages || [] // Add empty messages array if missing
-        }));
-        setSessions(sessionsWithMessages);
-      }
-    } catch (error) {
-      console.error('Error loading sessions:', error);
-    }
-  };
-
-  const loadSessionMessages = async (sessionId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions/${sessionId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          id: data.id,
-          title: data.title,
-          createdAt: new Date(data.createdAt),
-          lastMessageAt: new Date(data.lastMessageAt),
-          linkedEntryId: data.linkedEntryId,
-          messages: data.messages || [] // Ensure messages array exists
-        };
-      }
-    } catch (error) {
-      console.error('Error loading session messages:', error);
-    }
-    return null;
-  };
-
-  const startNewChat = async (linkedEntryId?: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ linkedEntryId })
-      });
-      
-      if (response.ok) {
-        const newSession = await response.json();
-        const sessionWithMessages = {
-          ...newSession,
-          messages: newSession.messages || [],
-          createdAt: new Date(newSession.createdAt),
-          lastMessageAt: new Date(newSession.lastMessageAt)
-        };
-        setSessions([sessionWithMessages, ...sessions]);
-        setActiveSession(sessionWithMessages);
-      }
-    } catch (error) {
-      console.error('Error creating chat:', error);
-    }
-  };
-
-  const handleSessionClick = async (session: ChatSession) => {
-    // If session doesn't have messages loaded, fetch them
-    if (!session.messages || session.messages.length === 0) {
-      const loadedSession = await loadSessionMessages(session.id);
-      if (loadedSession) {
-        setActiveSession(loadedSession);
-        // Also update the session in the sessions list
-        setSessions(prev => prev.map(s => 
-          s.id === loadedSession.id ? loadedSession : s
-        ));
-        return;
-      }
-    }
-    setActiveSession(session);
-  };
-
-  const handleSendMessage = async (message: string) => {
-    if (!message.trim() || !activeSession) return;
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: message,
-      timestamp: new Date()
-    };
-    
-    // Optimistically update UI
-    setActiveSession({
-      ...activeSession,
-      messages: [...(activeSession.messages || []), userMessage]
+  const loadSessions = async () => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+
+    const data = await res.json();
+    setSessions(data);
+  };
+
+  // 📥 Load full session
+  const loadSession = async (id: string) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+
+    setActiveSession({
+      ...data,
+      messages: (data.messages || []).map((m: any) => ({
+        ...m,
+        timestamp: new Date(m.timestamp)
+      }))
+    });
+  };
+
+  // ➕ New chat
+  const startChat = async () => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    setSessions([data, ...sessions]);
+    loadSession(data.id);
+  };
+
+  // Starting a chat from a journal entry
+  const startChatWithEntry = async (entryId: string) => {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ linkedEntryId: entryId })
+    });
+
+    const data = await res.json();
+    loadSession(data.id);
+  };
+
+  // 📤 Send message
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || !activeSession) return;
+
     setInputMessage('');
     setIsLoading(true);
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          sessionId: activeSession.id,
-          message: message
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const assistantMessage: Message = {
-          id: data.id,
-          role: 'assistant',
-          content: data.reply,
-          timestamp: new Date()
-        };
-        
-        setActiveSession(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            messages: [...(prev.messages || []), assistantMessage]
-          };
-        });
-        
-        // Update the session in the sessions list
-        setSessions(prev => prev.map(s => 
-          s.id === activeSession.id 
-            ? { ...s, lastMessageAt: new Date(), messages: [...(s.messages || []), userMessage, assistantMessage] }
-            : s
-        ));
-        
-        // Check if message indicates crisis
-        if (data.isCrisis) {
-          setShowHotline(true);
-          setTimeout(() => setShowHotline(false), 10000);
-        }
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
-      setIsLoading(false);
+
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        sessionId: activeSession.id,
+        message: text
+      })
+    });
+
+    const data = await res.json();
+
+    // Reload session (simplest + safest)
+    await loadSession(activeSession.id);
+
+    if (data.isCrisis) {
+      setShowHotline(true);
+      setTimeout(() => setShowHotline(false), 10000);
     }
+
+    if (data.isOutOfScope) {
+      alert("⚠️ This topic is restricted. Please change the conversation.");
+    }
+
+    setIsLoading(false);
   };
 
-  const startVoiceInput = () => {
+  // 🎤 Voice start
+  const startVoice = () => {
     if (recognitionRef.current) {
       setIsRecording(true);
       recognitionRef.current.start();
     }
   };
 
-  const scrollToBottom = () => {
+  // ⬇️ Auto scroll
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [activeSession?.messages]);
 
   return (
-    <div className="flex h-[80vh] bg-gray-100 rounded-xl overflow-hidden relative">
-      {/* Sidebar */}
-      <div className="w-80 bg-white border-r flex flex-col">
-        <div className="p-4 border-b">
+    <div
+      className="h-[80vh] rounded-xl overflow-hidden relative bg-cover bg-center"
+      style={{ backgroundImage: "url('/Chattime.png')" }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      <div className="relative flex h-full text-white">
+
+        {/* Sidebar */}
+        <div className="w-72 bg-white/10 backdrop-blur-md border-r border-white/20 p-4">
           <button
-            onClick={() => startNewChat()}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 rounded-lg font-semibold"
+            onClick={startChat}
+            className="w-full bg-purple-600 py-2 rounded-lg mb-4"
           >
-            + New Conversation
+            + New Chat
           </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto">
-          {sessions.map(session => (
+
+          {sessions.map(s => (
             <div
-              key={session.id}
-              onClick={() => handleSessionClick(session)}
-              className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition ${
-                activeSession?.id === session.id ? 'bg-purple-50' : ''
-              }`}
+              key={s.id}
+              onClick={() => loadSession(s.id)}
+              className="p-2 cursor-pointer hover:bg-white/20 rounded"
             >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="font-semibold text-sm truncate">{session.title}</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(session.lastMessageAt).toLocaleDateString()}
-                  </p>
-                </div>
-                {session.linkedEntryId && (
-                  <span className="text-xs text-purple-600">📖</span>
-                )}
-              </div>
+              {s.title}
             </div>
           ))}
-          {sessions.length === 0 && (
-            <div className="text-center text-gray-400 text-sm py-8">
-              No conversations yet.<br />Start a new one!
-            </div>
-          )}
+        </div>
+
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col">
+        {activeSession?.linkedEntryId && (
+          <button
+            onClick={() => navigate(`/journal?entryId=${activeSession.linkedEntryId}`)}
+            className="text-sm text-purple-300 underline"
+          >
+            📖 Go to Journal Entry
+          </button>
+        )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {activeSession?.messages.map(msg => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`p-3 rounded-lg max-w-[70%] ${
+                  msg.role === 'user'
+                    ? 'bg-purple-600'
+                    : 'bg-white/80 text-black'
+                }`}>
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+
+            {isLoading && <p>Typing...</p>}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-4 bg-white/10 backdrop-blur-md flex gap-2">
+
+            {isVoiceMode ? (
+              <button
+                onClick={startVoice}
+                className={`flex-1 py-2 rounded ${
+                  isRecording ? 'bg-red-500 animate-pulse' : 'bg-purple-600'
+                }`}
+              >
+                {isRecording ? 'Recording...' : '🎤 Speak'}
+              </button>
+            ) : (
+              <>
+                <input
+                  value={inputMessage}
+                  onChange={e => setInputMessage(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSendMessage(inputMessage)}
+                  className="flex-1 p-2 rounded text-black"
+                  placeholder="Type a message..."
+                />
+
+                <button
+                  onClick={() => handleSendMessage(inputMessage)}
+                  className="bg-purple-600 px-4 rounded"
+                >
+                  Send
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setIsVoiceMode(!isVoiceMode)}
+              className="bg-white/20 px-3 rounded"
+            >
+              🎤
+            </button>
+
+          </div>
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {activeSession ? (
-          <>
-            <div className="p-4 bg-white border-b">
-              <h3 className="font-semibold">{activeSession.title}</h3>
-              {activeSession.linkedEntryId && (
-                <p className="text-xs text-purple-600">Linked to journal entry</p>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {activeSession.messages && activeSession.messages.length > 0 ? (
-                activeSession.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[70%] p-3 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                          : 'bg-white text-gray-800 shadow'
-                      }`}
-                    >
-                      <p>{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  <div className="text-center">
-                    <p>No messages yet</p>
-                    <p className="text-sm">Start the conversation!</p>
-                  </div>
-                </div>
-              )}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white p-3 rounded-lg shadow">
-                    <div className="flex gap-1">
-                      <span className="animate-bounce">●</span>
-                      <span className="animate-bounce delay-100">●</span>
-                      <span className="animate-bounce delay-200">●</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="p-4 bg-white border-t">
-              <div className="flex gap-2">
-                {isVoiceMode ? (
-                  <button
-                    onClick={startVoiceInput}
-                    className={`flex-1 py-2 rounded-lg font-semibold transition ${
-                      isRecording
-                        ? 'bg-red-500 text-white animate-pulse'
-                        : 'bg-purple-600 text-white'
-                    }`}
-                  >
-                    {isRecording ? '🔴 Recording...' : '🎤 Click to Speak'}
-                  </button>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputMessage)}
-                      placeholder="Type your message..."
-                      className="flex-1 border rounded-lg p-2 focus:outline-none focus:border-purple-600"
-                    />
-                    <button
-                      onClick={() => handleSendMessage(inputMessage)}
-                      className="bg-purple-600 text-white px-4 rounded-lg"
-                    >
-                      Send
-                    </button>
-                    <button
-                      onClick={() => setIsVoiceMode(!isVoiceMode)}
-                      className="p-2 rounded-full bg-gray-200 hover:bg-gray-300"
-                    >
-                      🎤
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-6xl mb-4">💬</div>
-              <h3 className="text-xl font-semibold mb-2">Start a Conversation</h3>
-              <p className="text-gray-500 mb-4">
-                Choose an existing chat or start a new one
-              </p>
-              <button
-                onClick={() => startNewChat()}
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg"
-              >
-                New Conversation
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Crisis Hotline Modal */}
+      {/* 🚨 Crisis Popup */}
       {showHotline && (
-        <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
-          <div className="bg-red-500 text-white rounded-lg shadow-xl p-4 max-w-sm">
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-bold">⚠️ Need Support?</h4>
-              <button onClick={() => setShowHotline(false)} className="text-white">✕</button>
-            </div>
-            <p className="text-sm mb-3">You're not alone. Help is available 24/7:</p>
-            <div className="space-y-2">
-              {CRISIS_HOTLINES.map(hotline => (
-                <div key={hotline.number} className="bg-white/20 rounded p-2">
-                  <p className="font-semibold text-sm">{hotline.name}</p>
-                  <p className="text-sm">{hotline.number}</p>
-                  <p className="text-xs opacity-90">{hotline.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="absolute bottom-4 right-4 bg-red-600 p-4 rounded-lg shadow-lg">
+          <p className="font-bold">You’re not alone ❤️</p>
+          <p className="text-sm">Call Samaritans (UK): 116 123</p>
         </div>
       )}
-
-      <style>{`
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
-from services.crypto_service import encrypt_text
+from services.crypto_service import encrypt_text, decrypt_text
 from services.emotion_category import get_category
 import os
 import json
@@ -269,10 +269,23 @@ def get_entries(user_id):
         .order_by("createdAt")\
         .stream()
 
-    return [
-        {**doc.to_dict(), "id": doc.id}
-        for doc in docs
-    ]
+    entries = []
+
+    for doc in docs:
+        data = doc.to_dict()
+
+        try:
+            decrypted_text = decrypt_text(data["text"])
+        except Exception:
+            decrypted_text = "[Unable to decrypt]"
+
+        entries.append({
+            **data,
+            "id": doc.id,
+            "text": decrypted_text
+        })
+
+    return entries
 
 #Retrieving the primary emotion its weight and the date of the entry
 def get_emotion_history(user_id):

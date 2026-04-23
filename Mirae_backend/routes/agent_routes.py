@@ -15,8 +15,25 @@ agent_bp = Blueprint("agent", __name__, url_prefix="/agent")
 @agent_bp.route("/tokens", methods=["GET"])
 @require_auth
 def get_tokens(user_id):
-    """Get all tokens created by this user"""
-    tokens = get_agent_tokens(user_id)
+    docs = db.collection("users")\
+        .document(user_id)\
+        .collection("tokens")\
+        .stream()
+
+    tokens = []
+
+    for doc in docs:
+        data = doc.to_dict()
+
+        tokens.append({
+            "id": doc.id,
+            "token": data.get("token"),
+            "expiresAt": data.get("expiresAt"),
+            "createdAt": data.get("createdAt"),
+            "scopes": data.get("scopes", []),
+            "isActive": data.get("isActive", True)
+        })
+
     return jsonify(tokens), 200
 
 @agent_bp.route("/tokens", methods=["POST"])
