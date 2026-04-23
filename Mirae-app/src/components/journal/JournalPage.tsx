@@ -44,7 +44,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
     loadDecryptedText();
   }, [entry]);
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     if (!date) return '';
     const d = new Date(date);
     return d.toLocaleDateString('en-US', {
@@ -70,7 +70,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
       exit={{ opacity: 0 }}
     >
       {/* Inner scrollable content */}
-      <div className="absolute inset-0 overflow-y-auto p-6 pb-20">
+      <div className="absolute inset-0 overflow-y-auto p-6 pb-24">
         {/* Header */}
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <span className="text-xs text-gray-600 bg-white/50 px-2 py-1 rounded">
@@ -95,14 +95,14 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
             </div>
           ) : (
             <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words">
-              {displayText}
+              {displayText || "No content"}
             </p>
           )}
         </div>
       </div>
 
-      {/* Page Actions - Fixed at bottom */}
-      <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+      {/* Page Actions - Fixed at bottom with better positioning */}
+      <div className="absolute bottom-3 right-3 flex gap-2 z-20">
         <button 
           onClick={onEdit} 
           className="px-3 py-1.5 text-sm bg-blue-500 text-white border-none rounded hover:bg-blue-600 transition-colors disabled:opacity-50 shadow-md"
