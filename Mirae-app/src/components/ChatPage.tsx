@@ -89,11 +89,39 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
       });
       if (response.ok) {
         const data = await response.json();
-        setSessions(data);
+        // Ensure each session has a messages array
+        const sessionsWithMessages = data.map((session: any) => ({
+          ...session,
+          messages: session.messages || [] // Add empty messages array if missing
+        }));
+        setSessions(sessionsWithMessages);
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
     }
+  };
+
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions/${sessionId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          id: data.id,
+          title: data.title,
+          createdAt: new Date(data.createdAt),
+          lastMessageAt: new Date(data.lastMessageAt),
+          linkedEntryId: data.linkedEntryId,
+          messages: data.messages || [] // Ensure messages array exists
+        };
+      }
+    } catch (error) {
+      console.error('Error loading session messages:', error);
+    }
+    return null;
   };
 
   const startNewChat = async (linkedEntryId?: string) => {
@@ -110,12 +138,34 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
       
       if (response.ok) {
         const newSession = await response.json();
-        setSessions([newSession, ...sessions]);
-        setActiveSession(newSession);
+        const sessionWithMessages = {
+          ...newSession,
+          messages: newSession.messages || [],
+          createdAt: new Date(newSession.createdAt),
+          lastMessageAt: new Date(newSession.lastMessageAt)
+        };
+        setSessions([sessionWithMessages, ...sessions]);
+        setActiveSession(sessionWithMessages);
       }
     } catch (error) {
       console.error('Error creating chat:', error);
     }
+  };
+
+  const handleSessionClick = async (session: ChatSession) => {
+    // If session doesn't have messages loaded, fetch them
+    if (!session.messages || session.messages.length === 0) {
+      const loadedSession = await loadSessionMessages(session.id);
+      if (loadedSession) {
+        setActiveSession(loadedSession);
+        // Also update the session in the sessions list
+        setSessions(prev => prev.map(s => 
+          s.id === loadedSession.id ? loadedSession : s
+        ));
+        return;
+      }
+    }
+    setActiveSession(session);
   };
 
   const handleSendMessage = async (message: string) => {
@@ -128,9 +178,10 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
       timestamp: new Date()
     };
     
+    // Optimistically update UI
     setActiveSession({
       ...activeSession,
-      messages: [...activeSession.messages, userMessage]
+      messages: [...(activeSession.messages || []), userMessage]
     });
     setInputMessage('');
     setIsLoading(true);
@@ -158,15 +209,24 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
           timestamp: new Date()
         };
         
-        setActiveSession({
-          ...activeSession,
-          messages: [...activeSession.messages, userMessage, assistantMessage]
+        setActiveSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: [...(prev.messages || []), assistantMessage]
+          };
         });
+        
+        // Update the session in the sessions list
+        setSessions(prev => prev.map(s => 
+          s.id === activeSession.id 
+            ? { ...s, lastMessageAt: new Date(), messages: [...(s.messages || []), userMessage, assistantMessage] }
+            : s
+        ));
         
         // Check if message indicates crisis
         if (data.isCrisis) {
           setShowHotline(true);
-          // Auto-hide after 10 seconds
           setTimeout(() => setShowHotline(false), 10000);
         }
       }
@@ -205,7 +265,7 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
           {sessions.map(session => (
             <div
               key={session.id}
-              onClick={() => setActiveSession(session)}
+              onClick={() => handleSessionClick(session)}
               className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition ${
                 activeSession?.id === session.id ? 'bg-purple-50' : ''
               }`}
@@ -223,6 +283,11 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
               </div>
             </div>
           ))}
+          {sessions.length === 0 && (
+            <div className="text-center text-gray-400 text-sm py-8">
+              No conversations yet.<br />Start a new one!
+            </div>
+          )}
         </div>
       </div>
 
@@ -238,25 +303,34 @@ export default function ChatPage({ userId, initialEntryId }: ChatPageProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {activeSession.messages.map(message => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+              {activeSession.messages && activeSession.messages.length > 0 ? (
+                activeSession.messages.map((message) => (
                   <div
-                    className={`max-w-[70%] p-3 rounded-lg ${
-                      message.role === 'user'
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                        : 'bg-white text-gray-800 shadow'
-                    }`}
+                    key={message.id}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p>{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(message.timestamp).toLocaleTimeString()}
-                    </p>
+                    <div
+                      className={`max-w-[70%] p-3 rounded-lg ${
+                        message.role === 'user'
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                          : 'bg-white text-gray-800 shadow'
+                      }`}
+                    >
+                      <p>{message.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  <div className="text-center">
+                    <p>No messages yet</p>
+                    <p className="text-sm">Start the conversation!</p>
                   </div>
                 </div>
-              ))}
+              )}
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-white p-3 rounded-lg shadow">

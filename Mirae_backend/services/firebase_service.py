@@ -6,6 +6,7 @@ from services.emotion_category import get_category
 import os
 import json
 
+
 # Loading firebase credentials and initialising the app
 firebase_json = os.getenv("FIREBASE_CREDENTIALS")
 
