@@ -139,55 +139,44 @@ export default function ChatPage({ userId }: ChatPageProps) {
     loadSession(data.id);
   };
 
-  // 📤 Send message
+  //  Send message
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !activeSession) return;
 
     setInputMessage('');
     setIsLoading(true);
-
     const token = localStorage.getItem('token');
 
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        sessionId: activeSession.id,
-        message: text
-      })
-    });
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sessionId: activeSession.id, message: text })
+      });
 
-    if (!res.ok) {
-      console.error("Request failed");
+      const data = await res.json();
+
+      // ✅ Update the chat history locally
+      await loadSession(activeSession.id);
+
+      // ✅ Trigger Crisis UI
+      if (data.isCrisis) {
+        setShowHotline(true); 
+        // Don't auto-hide it if it's serious, or use a longer timer
+      }
+
+      // ✅ Trigger Restricted Topic Alert
+      if (data.isOutOfScope) {
+        // You can use a toast notification here instead of a generic alert
+        console.log("Topic restricted");
+      }
+
+    } catch (err) {
+      console.error(err);
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const data = await res.json();
-
-    if (!data) {
-      console.error("Empty response");
-      setIsLoading(false);
-      return;
-    }
-
-    await loadSession(activeSession.id);
-
-    if (data.isCrisis) {
-      setShowHotline(true);
-      setTimeout(() => setShowHotline(false), 10000);
-    }
-
-    if (data.isOutOfScope) {
-      alert("⚠️ This topic is restricted. Please change the conversation.");
-    }
-
-    setIsLoading(false);
   };
-
   // 🎤 Voice start
   const startVoice = () => {
     if (!recognitionRef.current) return;
@@ -236,7 +225,6 @@ export default function ChatPage({ userId }: ChatPageProps) {
   return (
     <div
       className="h-[80vh] rounded-xl overflow-hidden relative bg-cover bg-center"
-      style={{ backgroundImage: "url('/Chattime.png')" }}
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -342,9 +330,33 @@ export default function ChatPage({ userId }: ChatPageProps) {
 
       {/* 🚨 Crisis Popup */}
       {showHotline && (
-        <div className="absolute bottom-4 right-4 bg-red-600 p-4 rounded-lg shadow-lg">
-          <p className="font-bold">You’re not alone ❤️</p>
-          <p className="text-sm">Call Samaritans (UK): 116 123</p>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+          <div className="bg-white text-black p-6 rounded-2xl max-w-md shadow-2xl border-t-4 border-red-500">
+            <h2 className="text-2xl font-bold mb-2">You're not alone.</h2>
+            <p className="mb-4 text-gray-600">I'm Mirae, an AI, and I'm not a licensed professional. Please reach out to someone who can help right now:</p>
+            
+            <div className="space-y-3">
+              <div className="p-3 border rounded-lg hover:bg-gray-50">
+                <p className="font-bold">Samaritans (UK)</p>
+                <p className="text-sm">Call 116 123 - 24/7 confidential support for anyone in emotional distress.</p>
+              </div>
+              <div className="p-3 border rounded-lg hover:bg-gray-50">
+                <p className="font-bold">National Suicide Prevention (US)</p>
+                <p className="text-sm">Call or text 988 - Free and confidential support for people in distress.</p>
+              </div>
+              <div className="p-3 border rounded-lg hover:bg-gray-50">
+                <p className="font-bold">Shout</p>
+                <p className="text-sm">Text 'SHOUT' to 85258 - 24/7 text support for mental health concerns.</p>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowHotline(false)}
+              className="mt-6 w-full py-2 bg-gray-200 rounded-lg font-semibold"
+            >
+              Close & Continue Chat
+            </button>
+          </div>
         </div>
       )}
     </div>

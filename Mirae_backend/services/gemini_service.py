@@ -106,74 +106,43 @@ class GeminiChatSession:
         return any(keyword in text_lower for keyword in crisis_keywords)
     
     def send_message(self, user_message: str) -> Tuple[str, bool, bool]:
-        """Send a message and get response with crisis detection"""
-        # Check for out of scope topics first
+        # 1. Manual check for Politics/Religion (Redundancy)
         if detect_out_of_scope(user_message):
             return (
                 "I've noticed that the statements you've made tend to be delving into a sensitive topic that my coding is restricting me to converse in, so I would suggest we redirect this conversation. How are you feeling about your day today?",
                 False,
                 True
             )
-        
-        # Check for medical questions
-        if detect_medical_question(user_message):
-            return (
-                "I'm really glad you reached out, but I'm not a medical professional and can't provide medical advice. I encourage you to speak with a qualified healthcare provider who can give you proper guidance. Would you like to talk about how you're feeling instead?",
-                False,
-                True
-            )
-        
+
         try:
-            # Add user message to history
-            self.add_message("user", user_message)
-            
-            # Check for crisis pattern in recent messages
-            recent_messages = self.chat_history[-5:] if len(self.chat_history) > 5 else self.chat_history
-            has_crisis_pattern = any(
-                self._detect_crisis_pattern(msg["content"]) 
-                for msg in recent_messages if msg["role"] == "user"
-            )
-            
-            # If multiple crisis messages, force crisis flag
-            is_crisis = has_crisis_pattern or self.crisis_count >= 2
-            
-            # Prepare prompt for Gemini with context
-            prompt = f"""Previous conversation context (for understanding, not to repeat):
-{self._format_history_for_context()}
+            # 2. Crisis detection logic
+            current_is_crisis = self._detect_crisis_pattern(user_message)
+            if current_is_crisis:
+                self.crisis_count += 1
 
-Current user message: {user_message}
-
-Please respond as Mirae, the wellness assistant. Return your response in JSON format with these exact keys:
-- "reply": Your response text
-- "isCrisis": {str(is_crisis).lower()} (set to true if user expressed crisis)
-- "isOutOfScope": false (set to true if user asked about politics/religion)
-
-Keep your response warm, helpful, and within wellness support boundaries."""
-            
+            # 3. Request JSON from Gemini
             response = self.chat_session.send_message(
-                prompt,
+                user_message, # Send the actual message, keep the system instructions in the model init
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.7,
-                    max_output_tokens=500,
                 )
             )
             
-            # Parse the AI's JSON response
             ai_data = json.loads(response.text)
+            reply = ai_data.get('reply', "")
             
-            reply = ai_data.get('reply', "I'm here to listen. Can you tell me more about how you're feeling?")
-            is_crisis_response = ai_data.get('isCrisis', is_crisis)
-            is_out_of_scope = ai_data.get('isOutOfScope', False)
+            # If the AI detects crisis OR our local regex detects it
+            is_crisis = ai_data.get('isCrisis', False) or current_is_crisis
             
-            # Add assistant response to history
+            self.add_message("user", user_message)
             self.add_message("assistant", reply)
             
-            return reply, is_crisis_response, is_out_of_scope
+            return reply, is_crisis, False
             
         except Exception as e:
-            print(f"Gemini API Error: {e}")
-            return "I'm having trouble connecting right now. Please try again in a moment.", False, False
+            # Fallback if JSON parsing fails
+            return "I'm here to listen. Tell me more about your day.", False, False
     
     def _format_history_for_context(self) -> str:
         """Format recent chat history for context"""
