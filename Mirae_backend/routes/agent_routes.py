@@ -8,6 +8,7 @@ from services.jwt_middleware import require_auth, require_agent_role
 from services.firebase_service import get_user_role
 from datetime import datetime
 import json
+from services.firebase_service import db
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/agent")
 
@@ -15,9 +16,8 @@ agent_bp = Blueprint("agent", __name__, url_prefix="/agent")
 @agent_bp.route("/tokens", methods=["GET"])
 @require_auth
 def get_tokens(user_id):
-    docs = db.collection("users")\
-        .document(user_id)\
-        .collection("tokens")\
+    docs = db.collection("agent_tokens")\
+        .where("createdBy", "==", user_id)\
         .stream()
 
     tokens = []
@@ -189,7 +189,6 @@ def verify_agent_token():
         return jsonify({"error": error}), 401
     
     # Get the user who created this token
-    from services.agent_service import db
     token_doc = db.collection("agent_tokens").document(token).get()
     if not token_doc.exists:
         return jsonify({"error": "Token not found"}), 404

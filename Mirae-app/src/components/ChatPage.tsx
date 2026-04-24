@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -29,7 +29,8 @@ export default function ChatPage({ userId }: ChatPageProps) {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showHotline, setShowHotline] = useState(false);
-  const [params] = useSearchParams();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
   const entryId = params.get("entryId");
 
   const recognitionRef = useRef<any>(null);
