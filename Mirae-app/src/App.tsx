@@ -25,41 +25,30 @@ export default function App() {
       try {
         // Verify token and get role from backend
         const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
-        if (response.ok) {
-          const data = await response.json();
 
-          setUserRole(data.role);
-          setUserId(data.uid);
-          setIsAuthenticated(true);
-
-          
-          const avatarRes = await fetch(`${import.meta.env.VITE_API_URL}/user/avatar`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-
-          if (avatarRes.ok) {
-            const avatar = await avatarRes.json();
-            setAvatarData(avatar);
-          }
+        if (!response.ok) {
+          throw new Error("Failed to fetch role");
         }
 
-        if (response.ok) {
-          const data = await response.json();
-          setUserRole(data.role);
-          setUserId(data.uid);
-          setIsAuthenticated(true);
-          
-          // Cache role and userId
-          localStorage.setItem("userRole", data.role);
-          localStorage.setItem("userId", data.uid);
-        } else {
-          // Token invalid - clear storage
-          localStorage.removeItem("token");
-          localStorage.removeItem("userRole");
-          localStorage.removeItem("userId");
-          setIsAuthenticated(false);
+        const data = await response.json();
+
+        setUserRole(data.role);
+        setUserId(data.uid);
+        setIsAuthenticated(true);
+
+        localStorage.setItem("userRole", data.role);
+        localStorage.setItem("userId", data.uid);
+
+        // fetch avatar AFTER
+        const avatarRes = await fetch(`${import.meta.env.VITE_API_URL}/user/avatar`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (avatarRes.ok) {
+          const avatar = await avatarRes.json();
+          setAvatarData(avatar);
         }
       } catch (error) {
         console.error('Auth verification error:', error);

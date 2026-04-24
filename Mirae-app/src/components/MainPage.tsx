@@ -193,7 +193,18 @@ export default function MainPage({
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col items-center justify-center p-4 overflow-auto transition-colors duration-500 ${tabStyles[activeTab].bg}`}>
+      <div
+        className="flex-1 flex flex-col items-center justify-center p-4 overflow-auto transition-colors duration-500"
+        style={
+          activeTab === "chat"
+            ? {
+                backgroundImage: "url('/Chattime.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center"
+              }
+            : {}
+        }
+      >
         {renderContent()}
       </div>
 
