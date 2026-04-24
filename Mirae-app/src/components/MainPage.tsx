@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useGLTF, OrbitControls } from "@react-three/drei";
-import { Avatar } from "./Avatar";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import  { useState, useEffect, useRef } from "react";
+import { useGLTF} from "@react-three/drei";
 import JournalBook from "./journal/JournalBook";
 import ReminiscePage from "./ReminiscePage"; 
 import SettingsPage from './SettingsPage';
@@ -10,8 +8,8 @@ import AvatarScene from "./AvatarScene";
 import ChatPage from "./ChatPage";
 import DailyEncouragement from "./DailyEncouragement";
 import BackgroundMusic from './BackgroundMusic';
-import { useAvatarEmotion, EMOTION_COLORS } from './journal/useAvatarEmotion';
-import * as THREE from 'three';
+import { useAvatarEmotion } from './journal/useAvatarEmotion';
+import GameSidebar from "./GameSidebar";
 
 interface MainPageProps {
   avatarData: any;
@@ -95,6 +93,16 @@ export default function MainPage({
     }
   }, []);
 
+  // Listen for journal chat events
+  useEffect(() => {
+    const handler = () => {
+      setActiveTab("chat");
+    };
+
+    window.addEventListener("startChatFromJournal", handler);
+    return () => window.removeEventListener("startChatFromJournal", handler);
+  }, []);
+
 
   const tabStyles = {
     avatar: { ring: "ring-orange-400", bg: "bg-orange-100" },
@@ -120,11 +128,16 @@ export default function MainPage({
               )}
 
               {isInitialized && (
-                <AvatarScene
-                  currentSceneUrl={currentSceneUrl}
-                  currentEmotion={currentEmotion}
-                  avatarData={avatarData}
-                />
+                <>
+                  <AvatarScene
+                    currentSceneUrl={currentSceneUrl}
+                    currentEmotion={currentEmotion}
+                    avatarData={avatarData}
+                  />
+
+                  <GameSidebar />
+                </>
+                
               )}
             </div>
 

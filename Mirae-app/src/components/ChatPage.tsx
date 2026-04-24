@@ -29,9 +29,7 @@ export default function ChatPage({ userId }: ChatPageProps) {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showHotline, setShowHotline] = useState(false);
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const entryId = params.get("entryId");
+  
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -46,9 +44,13 @@ export default function ChatPage({ userId }: ChatPageProps) {
         const transcript = event.results[0][0].transcript;
         setIsRecording(false);
         handleSendMessage(transcript);
+        console.log("VOICE RESULT:", event);
       };
 
       recognitionRef.current.onerror = () => setIsRecording(false);
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = "en-GB";
     }
   }, []);
 
@@ -57,11 +59,20 @@ export default function ChatPage({ userId }: ChatPageProps) {
     loadSessions();
   }, []);
 
+  // Check for journal entry chat start
   useEffect(() => {
+    const entryId = localStorage.getItem("chatEntryId");
     if (entryId) {
       startChatWithEntry(entryId);
+      localStorage.removeItem("chatEntryId");
     }
-  }, [entryId]);
+  }, []);
+//  Auto scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeSession?.messages]);
+
+  
 
   const loadSessions = async () => {
     const token = localStorage.getItem('token');
@@ -145,9 +156,20 @@ export default function ChatPage({ userId }: ChatPageProps) {
       })
     });
 
+    if (!res.ok) {
+      console.error("Request failed");
+      setIsLoading(false);
+      return;
+    }
+
     const data = await res.json();
 
-    // Reload session (simplest + safest)
+    if (!data) {
+      console.error("Empty response");
+      setIsLoading(false);
+      return;
+    }
+
     await loadSession(activeSession.id);
 
     if (data.isCrisis) {
@@ -169,11 +191,22 @@ export default function ChatPage({ userId }: ChatPageProps) {
       recognitionRef.current.start();
     }
   };
+  const deleteChat = async (id: string) => {
+    const token = localStorage.getItem('token');
 
-  // ⬇️ Auto scroll
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeSession?.messages]);
+    await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    setSessions(prev => prev.filter(s => s.id !== id));
+
+    if (activeSession?.id === id) {
+      setActiveSession(null);
+    }
+  };
+
+  
 
   return (
     <div
@@ -201,6 +234,7 @@ export default function ChatPage({ userId }: ChatPageProps) {
               className="p-2 cursor-pointer hover:bg-white/20 rounded"
             >
               {s.title}
+              <button onClick={() => deleteChat(s.id)}>🗑</button>
             </div>
           ))}
         </div>
