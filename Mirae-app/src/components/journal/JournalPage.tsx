@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { JournalEntry } from './types';
 import { motion } from 'framer-motion';
 import { decryptText, isEncrypted } from '../../utils/decryption';
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   entry?: JournalEntry;
@@ -13,6 +14,11 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
   const [displayText, setDisplayText] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const handleChatClick = (entryId: string) => {
+    navigate(`/chat?entryId=${entryId}`);
+  };
 
   useEffect(() => {
     const loadDecryptedText = async () => {
@@ -100,6 +106,15 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
           )}
         </div>
       </div>
+
+      {entry.primaryEmotion === "neutral" && (
+        <button
+          onClick={() => handleChatClick(entry.id)}
+          className="fixed bottom-6 right-6 bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:scale-105 transition"
+        >
+          💬 Wanna talk?
+        </button>
+      )}
 
       {/* Page Actions - Fixed at bottom with better positioning */}
       <div className="absolute bottom-3 right-3 flex gap-2 z-20">

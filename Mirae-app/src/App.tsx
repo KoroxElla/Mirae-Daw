@@ -9,6 +9,7 @@ export default function App() {
   const [userRole, setUserRole] = useState<'user' | 'agent' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [avatarData, setAvatarData] = useState<any>(null);
 
   useEffect(() => {
     const checkAuthAndRole = async () => {
@@ -19,12 +20,30 @@ export default function App() {
         setIsLoading(false);
         return;
       }
+      
 
       try {
         // Verify token and get role from backend
         const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (response.ok) {
+          const data = await response.json();
+
+          setUserRole(data.role);
+          setUserId(data.uid);
+          setIsAuthenticated(true);
+
+          
+          const avatarRes = await fetch(`${import.meta.env.VITE_API_URL}/user/avatar`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (avatarRes.ok) {
+            const avatar = await avatarRes.json();
+            setAvatarData(avatar);
+          }
+        }
 
         if (response.ok) {
           const data = await response.json();
@@ -56,7 +75,15 @@ export default function App() {
   const handleAuthSuccess = async () => {
     // After successful login, fetch user role
     const token = localStorage.getItem("token");
-    
+    const avatarRes = await fetch(`${import.meta.env.VITE_API_URL}/user/avatar`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (avatarRes.ok) {
+      const avatar = await avatarRes.json();
+      setAvatarData(avatar);
+    }
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -116,7 +143,7 @@ export default function App() {
   return (
     <AvatarProvider>
       <MainPage
-        avatarData={null}
+        avatarData={avatarData}
         onCustomize={() => {}}
         onLogout={handleLogout}
       />
