@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -30,7 +31,7 @@ export default function ChatPage({ userId }: ChatPageProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [showHotline, setShowHotline] = useState(false);
   
-
+  const navigate = useNavigate();
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +49,9 @@ export default function ChatPage({ userId }: ChatPageProps) {
       };
 
       recognitionRef.current.onerror = () => setIsRecording(false);
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
       recognitionRef.current.lang = "en-GB";
@@ -186,26 +190,47 @@ export default function ChatPage({ userId }: ChatPageProps) {
 
   // 🎤 Voice start
   const startVoice = () => {
-    if (recognitionRef.current) {
-      setIsRecording(true);
+    if (!recognitionRef.current) return;
+
+    try {
+      recognitionRef.current.stop(); // reset if already running
       recognitionRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Voice error:", err);
     }
   };
+
   const deleteChat = async (id: string) => {
     const token = localStorage.getItem('token');
 
-    await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/chat/sessions/${id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-    setSessions(prev => prev.filter(s => s.id !== id));
+      if (!res.ok) {
+        throw new Error("Failed to delete chat");
+      }
 
-    if (activeSession?.id === id) {
-      setActiveSession(null);
+      // ✅ Remove from UI
+      setSessions(prev => prev.filter(s => s.id !== id));
+
+      // ✅ If the deleted chat was open, reset view
+      if (activeSession?.id === id) {
+        setActiveSession(null);
+      }
+
+    } catch (err) {
+      console.error("Delete failed:", err);
     }
   };
-
   
 
   return (
@@ -234,7 +259,9 @@ export default function ChatPage({ userId }: ChatPageProps) {
               className="p-2 cursor-pointer hover:bg-white/20 rounded"
             >
               {s.title}
-              <button onClick={() => deleteChat(s.id)}>🗑</button>
+              <button  onClick={(e) => { e.stopPropagation(); deleteChat(s.id); }} className="ml-2 text-red-500 hover:text-red-700">
+                🗑
+              </button>
             </div>
           ))}
         </div>
