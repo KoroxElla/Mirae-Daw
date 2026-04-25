@@ -176,35 +176,66 @@ def get_agent_stats(agent_id):
 
 @agent_bp.route("/verify-token", methods=["POST"])
 def verify_agent_token():
-    """Verify a user's agent token and return user info"""
     data = request.json
     token = data.get("token")
-    
-    if not token:
-        return jsonify({"error": "Token required"}), 400
-    
-    # Validate the token
+    selected_user_id = data.get("userId")
+
+    if not token or not selected_user_id:
+        return jsonify({"error": "Token and userId required"}), 400
+
     scopes, error = validate_agent_token(token)
     if error:
         return jsonify({"error": error}), 401
-    
-    # Get the user who created this token
+
     token_doc = db.collection("agent_tokens").document(token).get()
-    if not token_doc.exists:
-        return jsonify({"error": "Token not found"}), 404
-    
     token_data = token_doc.to_dict()
-    user_id = token_data.get("createdBy")
+
     
-    # Get user info
-    user = get_user_by_id(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-    
+    if token_data.get("createdBy") != selected_user_id:
+        return jsonify({"error": "Token does not belong to this user"}), 403
+
+    user = get_user_by_id(selected_user_id)
+
     return jsonify({
         "userId": user["id"],
-        "email": user["email"],
         "displayName": user["displayName"],
-        "createdAt": user["createdAt"],
         "scopes": scopes
     }), 200
+
+@agent_bp.route("/tokens/<token_id>/renew", methods=["PUT"])
+@require_auth
+def renew_token(user_id, token_id):
+    success, result = renew_agent_token(token_id)
+
+    if not success:
+        return jsonify({"error": result}), 400
+
+    return jsonify({
+        "message": "Token renewed",
+        "newExpiry": result
+    }), 200
+
+@agent_bp.route("/users/search", methods=["GET"])
+@require_agent_role
+def search_users(agent_id):
+    query = request.args.get("q", "").lower()
+
+    if not query:
+        return jsonify([]), 200
+
+    users_ref = db.collection("users")
+    users = users_ref.where("role", "==", "user").stream()
+
+    results = []
+    for user in users:
+        data = user.to_dict()
+        name = data.get("displayName", "").lower()
+
+        if query in name:
+            results.append({
+                "id": user.id,
+                "displayName": data.get("displayName"),
+                "email": data.get("email")
+            })
+
+    return jsonify(results[:10]), 200  

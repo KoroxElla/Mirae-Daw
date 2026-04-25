@@ -250,3 +250,26 @@ def export_user_data(user_id):
         "avatar_state": avatar_state,
         "exported_at": datetime.utcnow().isoformat()
     }
+
+def renew_agent_token(token_id, extra_days=30):
+    """Extend expiry of an existing token"""
+    token_ref = db.collection("agent_tokens").document(token_id)
+    token_doc = token_ref.get()
+
+    if not token_doc.exists:
+        return False, "Token not found"
+
+    data = token_doc.to_dict()
+
+    if not data.get("isActive", False):
+        return False, "Token is revoked"
+
+    # Extend expiry
+    new_expiry = datetime.utcnow() + timedelta(days=extra_days)
+
+    token_ref.update({
+        "expiresAt": new_expiry,
+        "renewedAt": datetime.utcnow()
+    })
+
+    return True, new_expiry

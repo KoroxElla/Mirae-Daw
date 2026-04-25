@@ -45,7 +45,6 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | '3months'>('month');
-  const [loading, setLoading] = useState(true);
   const [accessTokens, setAccessTokens] = useState<Map<string, string>>(new Map()); 
   
 
@@ -83,6 +82,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
     setTokenInput('');
     setTokenError('');
   };
+  let newUser: User;
 
   const verifyToken = async () => {
     setIsVerifying(true);
@@ -96,14 +96,15 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
         },
         body: JSON.stringify({ token: tokenInput })
       });
-
+      
       if (response.ok) {
         const data = await response.json();
         
         // Check if user already exists in the list
         const userExists = users.some(u => u.id === data.userId);
+        
         if (!userExists) {
-          const newUser: User = {
+          newUser = {
             id: data.userId,
             email: data.email,
             displayName: data.displayName,
@@ -156,7 +157,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
         }).then(r => r.json())
       ]);
       
-      setEmotionData(emotions);
+      setEmotionData(emotions.data);
       setJournalEntries(journals);
       setChatSessions(chats);
     } catch (error) {
@@ -200,20 +201,31 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
         </div>
         
         {/* Search Bar */}
-        <div className="p-4 border-b">
+        <div className="relative">
           <input
             type="text"
-            placeholder="Search users by name or email..."
+            placeholder="Search users..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-purple-600"
+            className="w-full border rounded-lg p-2 text-sm"
           />
-          <button
-            onClick={handleAddUser}
-            className="w-full mt-2 bg-purple-600 text-white py-2 rounded-lg text-sm hover:bg-purple-700"
-          >
-            + Add New User
-          </button>
+
+          {searchQuery && filteredUsers.length > 0 && (
+            <div className="absolute w-full bg-white border rounded-lg mt-1 shadow-lg z-10 max-h-40 overflow-y-auto">
+              {filteredUsers.map(user => (
+                <div
+                  key={user.id}
+                  onClick={() => {
+                    setSelectedUser(user);
+                    setSearchQuery('');
+                  }}
+                  className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                >
+                  {user.displayName || user.email}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         
         {/* Users List */}

@@ -30,7 +30,7 @@ export default function ChatPage({ userId }: ChatPageProps) {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showHotline, setShowHotline] = useState(false);
-  
+  const location = useLocation();
   const navigate = useNavigate();
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,6 +75,16 @@ export default function ChatPage({ userId }: ChatPageProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages]);
+
+  // Check for journal entry chat start via URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const entryId = params.get("entryId");
+
+    if (entryId) {
+      startChatWithEntry(entryId);
+    }
+  }, [location.search]);
 
   
 
@@ -220,6 +230,16 @@ export default function ChatPage({ userId }: ChatPageProps) {
       console.error("Delete failed:", err);
     }
   };
+
+  const handleDeleteWithConfirm = (id: string) => {
+    const confirmDelete = window.confirm(
+      "⚠️ This chat will be permanently deleted and cannot be restored. Continue?"
+    );
+
+    if (confirmDelete) {
+      deleteChat(id);
+    }
+  };
   
 
   return (
@@ -247,23 +267,30 @@ export default function ChatPage({ userId }: ChatPageProps) {
               className="p-2 cursor-pointer hover:bg-white/20 rounded"
             >
               {s.title}
-              <button  onClick={(e) => { e.stopPropagation(); deleteChat(s.id); }} className="ml-2 text-red-500 hover:text-red-700">
-                🗑
-              </button>
+              
             </div>
           ))}
         </div>
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
-        {activeSession?.linkedEntryId && (
-          <button
-            onClick={() => navigate(`/journal?entryId=${activeSession.linkedEntryId}`)}
-            className="text-sm text-purple-300 underline"
-          >
-            📖 Go to Journal Entry
-          </button>
-        )}
+          <div className="flex justify-between items-center p-3 border-b border-white/20">
+            {activeSession?.linkedEntryId ? (
+              <button
+                onClick={() => navigate(`/journal?entryId=${activeSession.linkedEntryId}`)}
+                className="text-sm text-purple-300 underline"
+              >
+                📖 Back to Journal
+              </button>
+            ) : <div />}
+
+            <button
+              onClick={() => handleDeleteWithConfirm(activeSession.id)}
+              className="text-red-400 hover:text-red-600 text-sm"
+            >
+              🗑 Delete Chat
+            </button>
+          </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">

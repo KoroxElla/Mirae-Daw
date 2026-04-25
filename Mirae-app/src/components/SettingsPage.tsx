@@ -204,6 +204,21 @@ export default function SettingsPage({ userId, onClose }: SettingsPageProps) {
     }
   };
 
+  const renewToken = async (tokenId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      await fetch(`${import.meta.env.VITE_API_URL}/agent/tokens/${tokenId}/renew`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      fetchUserData(); // refresh list
+    } catch (error) {
+      console.error('Error renewing token:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -262,18 +277,6 @@ export default function SettingsPage({ userId, onClose }: SettingsPageProps) {
                 </label>
               </div>
 
-              <div>
-                <h3 className="font-semibold mb-3">Privacy</h3>
-                <select
-                  value={settings.privacyLevel}
-                  onChange={(e) => updateSettings({ privacyLevel: e.target.value as any })}
-                  className="w-full border rounded-lg p-2"
-                >
-                  <option value="private">Private - Only me</option>
-                  <option value="friends">Friends only</option>
-                  <option value="public">Public</option>
-                </select>
-              </div>
 
               <div>
                 <h3 className="font-semibold mb-3">Accessibility</h3>
@@ -389,6 +392,12 @@ export default function SettingsPage({ userId, onClose }: SettingsPageProps) {
                         className="text-red-500 text-xs"
                       >
                         Revoke
+                      </button>
+                      <button
+                        onClick={() => renewToken(token.id)}
+                        className="text-blue-500 text-xs"
+                      >
+                        Renew
                       </button>
                     </div>
                   </div>

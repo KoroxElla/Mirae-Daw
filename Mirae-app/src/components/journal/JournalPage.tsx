@@ -17,8 +17,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
   const navigate = useNavigate();
 
   const handleChatClick = (entryId: string) => {
-    localStorage.setItem("chatEntryId", entryId);
-    window.dispatchEvent(new Event("startChatFromJournal"));
+    navigate(`/chat?entryId=${entryId}`);
   };
 
   useEffect(() => {
