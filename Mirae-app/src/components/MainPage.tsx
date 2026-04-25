@@ -32,6 +32,7 @@ export default function MainPage({
   const [currentEmotion, setCurrentEmotion] = useState<string>("neutral");
   const [isInitialized, setIsInitialized] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
   
   // Use ref to track if we've already set initial scene
   const initialSceneSetRef = useRef(false);
@@ -101,6 +102,27 @@ export default function MainPage({
 
     window.addEventListener("startChatFromJournal", handler);
     return () => window.removeEventListener("startChatFromJournal", handler);
+  }, []);
+
+
+  // Improved notification logic to only show once per day
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const today = now.toDateString();
+      const lastShown = localStorage.getItem("lastReminder");
+
+      if (
+        now.getHours() === 20 &&
+        now.getMinutes() === 0 &&
+        lastShown !== today
+      ) {
+        setShowReminder(true);
+        localStorage.setItem("lastReminder", today);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
 
@@ -194,7 +216,9 @@ export default function MainPage({
 
       {/* Main Content */}
       <div
-        className="flex-1 flex flex-col items-center justify-center p-4 overflow-auto transition-colors duration-500"
+        className={`flex-1 flex flex-col items-center justify-center p-4 overflow-auto transition-colors duration-500 ${
+          activeTab !== "chat" ? tabStyles[activeTab].bg : ""
+        }`}
         style={
           activeTab === "chat"
             ? {
@@ -207,6 +231,17 @@ export default function MainPage({
       >
         {renderContent()}
       </div>
+      {showReminder && (
+        <div className="fixed bottom-6 left-6 bg-purple-600 text-white px-4 py-3 rounded-lg shadow-lg z-50">
+          🌱 Time to check in with yourself
+          <button
+            onClick={() => setShowReminder(false)}
+            className="ml-3 text-sm underline"
+          >
+            dismiss
+          </button>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <div className="bg-white shadow-inner p-4 flex justify-around z-20">

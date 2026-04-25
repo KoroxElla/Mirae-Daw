@@ -11,6 +11,7 @@ def init_gemini():
     if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable not set")
     genai.configure(api_key=api_key)
+    print(genai.list_models())
     return True
 
 # System instruction for the wellness assistant
@@ -106,43 +107,32 @@ class GeminiChatSession:
         return any(keyword in text_lower for keyword in crisis_keywords)
     
     def send_message(self, user_message: str) -> Tuple[str, bool, bool]:
-        # 1. Manual check for Politics/Religion (Redundancy)
         if detect_out_of_scope(user_message):
-            return (
-                "I've noticed that the statements you've made tend to be delving into a sensitive topic that my coding is restricting me to converse in, so I would suggest we redirect this conversation. How are you feeling about your day today?",
-                False,
-                True
-            )
+            return ("I've noticed that the statements you've made tend to be delving into a sensitive topic...", False, True)
 
         try:
-            # 2. Crisis detection logic
-            current_is_crisis = self._detect_crisis_pattern(user_message)
-            if current_is_crisis:
-                self.crisis_count += 1
-
-            # 3. Request JSON from Gemini
+            # 1. Ask for JSON clearly in the prompt
+            full_prompt = f"{user_message}\n\nIMPORTANT: Respond ONLY in JSON format with keys: 'reply', 'isCrisis' (bool), 'isOutOfScope' (bool)."
+            
             response = self.chat_session.send_message(
-                user_message, # Send the actual message, keep the system instructions in the model init
+                full_prompt,
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.7,
                 )
             )
-            
-            ai_data = json.loads(response.text)
-            reply = ai_data.get('reply', "")
-            
-            # If the AI detects crisis OR our local regex detects it
-            is_crisis = ai_data.get('isCrisis', False) or current_is_crisis
-            
-            self.add_message("user", user_message)
-            self.add_message("assistant", reply)
+
+            # 2. Parse JSON carefully
+            data = json.loads(response.text)
+            reply = data.get("reply", "I'm here to listen.")
+            is_crisis = data.get("isCrisis", False) or self._detect_crisis_pattern(user_message)
             
             return reply, is_crisis, False
-            
+
         except Exception as e:
-            # Fallback if JSON parsing fails
-            return "I'm here to listen. Tell me more about your day.", False, False
+            
+            print(f"❌ Gemini Runtime Error: {e}") 
+            return "I'm having a little trouble processing that. Can we try talking about something else?", False, False
     
     def _format_history_for_context(self) -> str:
         """Format recent chat history for context"""

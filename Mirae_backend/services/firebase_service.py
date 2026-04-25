@@ -82,23 +82,6 @@ def create_user_with_role(user_id, email, password_hash=None, display_name="", r
     db.collection("users").document(user_id).set(user_data)
 
 
-# Adding default roles to existing users
-def migrate_existing_users_to_default_role():
-    """Run this once to add 'user' role to all existing users without a role"""
-    users_ref = db.collection("users")
-    users = users_ref.stream()
-    
-    updated_count = 0
-    for user in users:
-        user_data = user.to_dict()
-        if "role" not in user_data:
-            users_ref.document(user.id).update({
-                "role": "user"
-            })
-            updated_count += 1
-    
-    print(f"✅ Updated {updated_count} existing users with default 'user' role")
-    return updated_count
 
 #Retrieving user role
 def get_user_role(user_id):
@@ -108,14 +91,6 @@ def get_user_role(user_id):
         return doc.to_dict().get("role", "user")
     return "user"
 
-
-# Updating user role
-def update_user_role(user_id, new_role):
-    """Update user's role (admin only)"""
-    db.collection("users").document(user_id).update({
-        "role": new_role,
-        "updatedAt": datetime.utcnow()
-    })
 
 
 #Implementing the Journal entry
