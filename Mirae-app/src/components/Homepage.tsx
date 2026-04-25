@@ -176,38 +176,40 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   const handleLogin = async () => {
     setEmailError(null);
     setPasswordError(null);
-    
+
     if (!validateEmail(email)) {
       setEmailError("Please enter a valid email address");
       return;
     }
-    
+
     setIsTransitioning(true);
+
     try {
       const userCred = await signInWithEmailAndPassword(firebaseAuth, email, password);
       const token = await userCred.user.getIdToken();
-      const success = await sendTokenToBackend(token, undefined);
+
+      localStorage.setItem("token", token);
+
       
-      if (!success) {
-        setIsTransitioning(false);
-        return;
-      }
-      
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/user/role`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      localStorage.setItem("userRole", data.role);
+      localStorage.setItem("userId", data.uid);
+
       showToast("Login successful! Redirecting...", "success");
+
       setTimeout(() => {
         onAuthSuccess();
       }, 1000);
+
     } catch (error: any) {
       setIsTransitioning(false);
-      if (error.code === 'auth/user-not-found') {
-        setEmailError("No account found with this email");
-      } else if (error.code === 'auth/wrong-password') {
-        setPasswordError("Incorrect password");
-      } else if (error.code === 'auth/invalid-email') {
-        setEmailError("Invalid email format");
-      } else {
-        showToast(error.message || "Login failed", "error");
-      }
       console.error(error);
     }
   };
