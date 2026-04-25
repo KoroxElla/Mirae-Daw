@@ -34,7 +34,7 @@ class GeminiChatSession:
         self.user_id = user_id
         self.chat_history: List[Dict] = []
         self.client = init_gemini()
-        self.model_id = "gemini-3.1-flash-preview" 
+        self.model_id = "gemini-1.5-flash" 
         self.created_at = datetime.utcnow()
         self.crisis_count = 0
         
@@ -69,7 +69,10 @@ class GeminiChatSession:
                 )
             )
 
-            ai_data = json.loads(response.text)
+            try:
+                ai_data = json.loads(response.text)
+            except:
+                return "I'm here to listen. Tell me more.", False, False
             reply = ai_data.get('reply', "I'm listening.")
             is_crisis = ai_data.get('isCrisis', False) or (self.crisis_count >= 1)
             is_out_of_scope = ai_data.get('isOutOfScope', False)

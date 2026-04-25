@@ -188,3 +188,26 @@ def get_chat_history(user_id, session_id):
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@chat_bp.route("/sessions/<session_id>", methods=["DELETE"])
+@require_auth
+def delete_chat_session(user_id, session_id):
+    try:
+        chat_ref = db.collection("users").document(user_id).collection("chats").document(session_id)
+        
+        if not chat_ref.get().exists:
+            return jsonify({"error": "Session not found"}), 404
+
+        # 🔥 Delete from Firestore
+        chat_ref.delete()
+
+        # 🔥 Remove from active Gemini sessions
+        if session_id in active_sessions:
+            del active_sessions[session_id]
+
+        return jsonify({"message": "Chat deleted"}), 200
+
+    except Exception as e:
+        print(f"Delete error: {e}")
+        return jsonify({"error": "Failed to delete chat"}), 500

@@ -46,6 +46,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | '3months'>('month');
   const [accessTokens, setAccessTokens] = useState<Map<string, string>>(new Map()); 
+  const [selectedUserId, setSelectedUserId] = useState('');
   
 
   // Load existing accessed users from localStorage
@@ -64,16 +65,30 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
     }
   }, [selectedUser, timeRange]);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
     setSearchQuery(query);
-    if (query.trim() === '') {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(user => 
-        user.displayName?.toLowerCase().includes(query.toLowerCase()) ||
-        user.email?.toLowerCase().includes(query.toLowerCase())
+
+    if (!query.trim()) {
+      setFilteredUsers([]);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/agent/users/search?q=${query}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
-      setFilteredUsers(filtered);
+
+      const data = await res.json();
+      setFilteredUsers(data);
+    } catch (err) {
+      console.error("Search failed:", err);
     }
   };
 
@@ -82,57 +97,54 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
     setTokenInput('');
     setTokenError('');
   };
-  let newUser: User;
+
 
   const verifyToken = async () => {
+    if (!selectedUser) return;
+
     setIsVerifying(true);
     setTokenError('');
-    
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/agent/verify-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: tokenInput })
-      });
-      
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/agent/verify-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: tokenInput,
+            userId: selectedUser.id   // ✅ REQUIRED
+          })
+        }
+      );
+
       if (response.ok) {
         const data = await response.json();
-        
-        // Check if user already exists in the list
-        const userExists = users.some(u => u.id === data.userId);
-        
-        if (!userExists) {
-          newUser = {
-            id: data.userId,
-            email: data.email,
-            displayName: data.displayName,
-            createdAt: data.createdAt
-          };
-          
-          const updatedUsers = [...users, newUser];
-          setUsers(updatedUsers);
-          setFilteredUsers(updatedUsers);
-          
-          // Save to localStorage
-          localStorage.setItem(`agent_${agentId}_users`, JSON.stringify(updatedUsers));
-          
-          // Store token for this user
-          const newTokens = new Map(accessTokens);
-          newTokens.set(data.userId, tokenInput);
-          setAccessTokens(newTokens);
-          localStorage.setItem(`agent_${agentId}_tokens`, JSON.stringify(Array.from(newTokens.entries())));
-        }
-        
+
+        const updatedUsers = [...users, selectedUser];
+        setUsers(updatedUsers);
+        setFilteredUsers(updatedUsers);
+
+        localStorage.setItem(
+          `agent_${agentId}_users`,
+          JSON.stringify(updatedUsers)
+        );
+
+        // store token
+        const newTokens = new Map(accessTokens);
+        newTokens.set(selectedUser.id, tokenInput);
+        setAccessTokens(newTokens);
+
         setShowTokenModal(false);
-        setSelectedUser(newUser);
       } else {
         const error = await response.json();
-        setTokenError(error.message || 'Invalid or expired token');
+        setTokenError(error.error || "Invalid token");
       }
-    } catch (error) {
-      setTokenError('Failed to verify token. Please try again.');
+
+    } catch {
+      setTokenError("Verification failed");
     } finally {
       setIsVerifying(false);
     }
@@ -199,6 +211,15 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
           <h2 className="text-xl font-bold text-purple-600">Agent Dashboard</h2>
           <p className="text-xs text-gray-500">Therapist/Admin View</p>
         </div>
+        <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+          }}
+          className="text-xs text-red-500 mt-2"
+        >
+          Logout
+        </button>
         
         {/* Search Bar */}
         <div className="relative">

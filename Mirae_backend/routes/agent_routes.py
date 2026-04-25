@@ -230,8 +230,9 @@ def search_users(agent_id):
     for user in users:
         data = user.to_dict()
         name = data.get("displayName", "").lower()
+        email = data.get("email", "").lower()
 
-        if query in name:
+        if query in name or query in email:
             results.append({
                 "id": user.id,
                 "displayName": data.get("displayName"),

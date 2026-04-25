@@ -285,7 +285,7 @@ export default function ChatPage({ userId }: ChatPageProps) {
             ) : <div />}
 
             <button
-              onClick={() => handleDeleteWithConfirm(activeSession.id)}
+              onClick={() => activeSession && handleDeleteWithConfirm(activeSession.id)}
               className="text-red-400 hover:text-red-600 text-sm"
             >
               🗑 Delete Chat
