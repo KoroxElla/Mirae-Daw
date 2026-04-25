@@ -77,13 +77,13 @@ def register():
         
         if request.is_json:
             data = request.get_json() or {}
-            role = data.get("role", "user")
+            role = data.get("role")
             display_name = data.get("displayName", "")
             
             # Validate role
             if role not in ["user", "agent"]:
                 logger.warning(f"Invalid role '{role}', defaulting to 'user'")
-                role = "user"
+                role = None
         
         logger.info(f"📝 Creating user with role: {role}, displayName: {display_name}")
         
@@ -95,7 +95,7 @@ def register():
                 email=email, 
                 password_hash=None,  # Firebase handles auth
                 display_name=display_name, 
-                role=role  
+                role=role if role else "user"
             )
             logger.info(f"✅ User {uid} created in Firestore with role {role}")
             

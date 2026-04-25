@@ -127,16 +127,21 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
     try {
       localStorage.setItem("token", token);
 
+      const bodyData: any = {
+        displayName: displayName || "",
+      };
+
+      if (role) {
+        bodyData.role = role;  
+      }
+
       const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          displayName: displayName || "",
-          role: role || "user",
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       if (!res.ok) {
@@ -181,7 +186,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
     try {
       const userCred = await signInWithEmailAndPassword(firebaseAuth, email, password);
       const token = await userCred.user.getIdToken();
-      const success = await sendTokenToBackend(token);
+      const success = await sendTokenToBackend(token, undefined);
       
       if (!success) {
         setIsTransitioning(false);
