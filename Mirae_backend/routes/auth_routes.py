@@ -110,11 +110,6 @@ def register():
                 logger.info(f"📋 User already exists with role: {existing_role}")
                 
                 
-                if existing_role != role and role == "agent":
-                    logger.info(f"🔄 Updating user {uid} role from {existing_role} to {role}")
-                    update_user_role(uid, role)
-                    existing_role = role
-                
                 return jsonify({
                     "status": "already_exists",
                     "uid": uid,
