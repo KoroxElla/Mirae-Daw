@@ -42,7 +42,7 @@ class GeminiChatSession:
         self.user_id = user_id
         self.chat_history: List[Dict] = []
         self.client = init_gemini()
-        self.model_id = "gemini-1.5-flash" 
+        self.model_id = "gemini-2.5-flash" 
         self.created_at = datetime.utcnow()
         self.crisis_count = 0
         

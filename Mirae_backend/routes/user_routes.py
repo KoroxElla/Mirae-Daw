@@ -45,12 +45,6 @@ def update_user(user_id):
 
     return jsonify({"success": True})
 
-# Get user preferences
-@user_bp.route("/settings", methods=["GET"])
-@require_auth
-def get_settings(user_id):
-    doc = db.collection("users").document(user_id).get()
-    return jsonify(doc.to_dict().get("settings", {}))
 
 # Update user settings
 @user_bp.route("/preferences", methods=["GET"])
