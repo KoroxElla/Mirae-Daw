@@ -11,7 +11,15 @@ def init_gemini():
     api_key = os.environ.get('GEMINI_API_KEY')
     if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable not set")
-    return genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key)
+    try:
+        models = client.models.list()
+        print("\n🔥 AVAILABLE MODELS:")
+        for m in models:
+            print(m.name)
+    except Exception as e:
+        print("❌ Failed to list models:", e)
+    return client
 
 SYSTEM_INSTRUCTION = """You are a mental health wellness assistant called "Mirae". 
 Strictly avoid Politics, Religion, and Medical advice. 
@@ -71,6 +79,7 @@ class GeminiChatSession:
 
             try:
                 ai_data = json.loads(response.text)
+                print("RAW GEMINI RESPONSE:", response.text)
             except:
                 return "I'm here to listen. Tell me more.", False, False
             reply = ai_data.get('reply', "I'm listening.")

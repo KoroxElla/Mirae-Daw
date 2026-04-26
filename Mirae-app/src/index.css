@@ -84,6 +84,16 @@
   font-weight: bold;
 }
 
+.high-contrast {
+  filter: contrast(1.4);
+  background: black;
+  color: white;
+}
+
+.large-text {
+  font-size: 1.2em;
+}
+
 .scrap-preview {
   font-size: 14px;
   margin-bottom: 12px;

@@ -178,10 +178,9 @@ def get_agent_stats(agent_id):
 def verify_agent_token():
     data = request.json
     token = data.get("token")
-    selected_user_id = data.get("userId")
 
-    if not token or not selected_user_id:
-        return jsonify({"error": "Token and userId required"}), 400
+    if not token:
+        return jsonify({"error": "Token required"}), 400
 
     scopes, error = validate_agent_token(token)
     if error:
@@ -190,15 +189,15 @@ def verify_agent_token():
     token_doc = db.collection("agent_tokens").document(token).get()
     token_data = token_doc.to_dict()
 
-    
-    if token_data.get("createdBy") != selected_user_id:
-        return jsonify({"error": "Token does not belong to this user"}), 403
+    user_id = token_data.get("createdBy")  # ✅ GET USER FROM TOKEN
 
-    user = get_user_by_id(selected_user_id)
+    user = get_user_by_id(user_id)
 
     return jsonify({
         "userId": user["id"],
-        "displayName": user["displayName"],
+        "email": user.get("email"),
+        "displayName": user.get("displayName"),
+        "createdAt": user.get("createdAt"),
         "scopes": scopes
     }), 200
 

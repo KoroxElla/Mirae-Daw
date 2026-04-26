@@ -22,6 +22,7 @@ interface EmotionData {
 
 interface AgentDashboardProps {
   agentId: string;
+  onLogout: () => void;
 }
 
 const EMOTION_COLORS = {
@@ -211,15 +212,9 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
           <h2 className="text-xl font-bold text-purple-600">Agent Dashboard</h2>
           <p className="text-xs text-gray-500">Therapist/Admin View</p>
         </div>
-        <button
-          onClick={() => {
-            localStorage.removeItem("token");
-            window.location.href = "/login";
-          }}
-          className="text-xs text-red-500 mt-2"
-        >
-          Logout
-        </button>
+        <button onClick={onLogout} className="text-sm bg-gray-200 px-3 py-1 rounded-full hover:bg-gray-300 transition-colors">
+            Logout
+          </button>
         
         {/* Search Bar */}
         <div className="relative">

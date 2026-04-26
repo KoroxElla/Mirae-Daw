@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface UserSettings {
   notifications: boolean;
@@ -57,6 +58,7 @@ export default function SettingsPage({ userId, onClose }: SettingsPageProps) {
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['emotions']);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { updateSettings: updateGlobalSettings } = useSettings();
 
   // Fetch user settings from backend
   useEffect(() => {
@@ -110,34 +112,28 @@ export default function SettingsPage({ userId, onClose }: SettingsPageProps) {
     }
   };
 
-  const updateSettings = async (newSettings: Partial<UserSettings>) => {
-    try {
-      const token = localStorage.getItem('token');
-      const updated = { ...settings, ...newSettings };
-      
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updated)
-      });
+  
 
-      if (response.ok) {
-        setSettings(updated);
-        localStorage.setItem(`user_settings_${userId}`, JSON.stringify(updated));
-        
-        // Apply accessibility settings immediately
-        if (newSettings.highContrast !== undefined) {
-          document.body.classList.toggle('high-contrast', newSettings.highContrast);
-        }
-        if (newSettings.largeText !== undefined) {
-          document.body.classList.toggle('large-text', newSettings.largeText);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating settings:', error);
+  const updateSettings = async (newSettings: Partial<UserSettings>) => {
+    const token = localStorage.getItem('token');
+    const updated = { ...settings, ...newSettings };
+
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/user/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(updated)
+    });
+
+    if (res.ok) {
+      setSettings(updated);
+
+      updateGlobalSettings(updated);
+    }
+    if (newSettings.notifications) {
+      Notification.requestPermission();
     }
   };
 

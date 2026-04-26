@@ -125,7 +125,7 @@ export default function App() {
 
   // Agent logged in - redirect to Agent Dashboard
   if (userRole === 'agent') {
-    return <AgentDashboard agentId={userId || ''} />;
+    return <AgentDashboard agentId={userId || ''} onLogout={handleLogout}/>;
   }
 
   // Regular user - redirect to MainPage

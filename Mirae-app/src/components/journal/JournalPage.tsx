@@ -110,7 +110,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
       {entry.primaryEmotion === "neutral" && (
         <button
           onClick={() => handleChatClick(entry.id)}
-          className="fixed bottom-6 right-6 bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:scale-105 transition"
+          className="fixed bottom-6 left-6 bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:scale-105 transition"
         >
           💬 Wanna talk?
         </button>
