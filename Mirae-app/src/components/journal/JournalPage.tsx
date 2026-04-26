@@ -16,9 +16,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
   const [decryptError, setDecryptError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleChatClick = (entryId: string) => {
-    navigate(`/chat?entryId=${entryId}`);
-  };
+  
 
   useEffect(() => {
     const loadDecryptedText = async () => {
@@ -50,6 +48,8 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
     loadDecryptedText();
   }, [entry]);
 
+  
+
   const formatDate = (date: Date | string) => {
     if (!date) return '';
     const d = new Date(date);
@@ -58,6 +58,36 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const startChat = async (entryId: string) => {
+    let chatId = localStorage.getItem(`journal_${entryId}_chat`);
+
+    // 🧠 Create if it doesn't exist
+    if (!chatId) {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ linkedEntryId: entryId })
+      });
+
+      const data = await res.json();
+      chatId = data.id;
+
+      // 🔗 store BOTH directions
+      localStorage.setItem(`journal_${entryId}_chat`, chatId);
+      localStorage.setItem(`chat_${chatId}_entry`, entryId);
+    }
+
+    // 🚀 tell MainPage to switch
+    window.dispatchEvent(
+      new CustomEvent("startChatFromJournal", {
+        detail: { chatId }
+      })
+    );
   };
 
   if (!entry) {
@@ -109,7 +139,7 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
 
       {entry.primaryEmotion === "neutral" && (
         <button
-          onClick={() => handleChatClick(entry.id)}
+          onClick={() => startChat(entry.id)}
           className="fixed bottom-6 left-6 bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:scale-105 transition"
         >
           💬 Wanna talk?

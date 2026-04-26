@@ -12,7 +12,8 @@ EMOTION_MAP = {
 
 
 def analyze_text(text: str) -> dict:
-    weights = real_sentiment_analyzer(text)
+    result = real_sentiment_analyzer(text)
+    weights = result.get("weights", {})
 
     if not weights:
         return {"neutral": 1.0}
@@ -20,7 +21,6 @@ def analyze_text(text: str) -> dict:
     mapped = {}
 
     for emotion, value in weights.items():
-        d
         mapped_name = EMOTION_MAP.get(emotion, emotion)
         mapped[mapped_name] = mapped.get(mapped_name, 0) + value
 

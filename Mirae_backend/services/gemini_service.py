@@ -72,8 +72,7 @@ class GeminiChatSession:
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_INSTRUCTION,
                     response_mime_type="application/json",
-                    temperature=0.7,
-                    thinking_config=types.ThinkingConfig(thinking_level="LOW")
+                    temperature=0.7
                 )
             )
 

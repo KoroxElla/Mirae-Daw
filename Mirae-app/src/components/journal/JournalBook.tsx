@@ -49,6 +49,24 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     loadJournalData();
   }, [userId]);
 
+  // Flip to the last active entry if it exists
+  useEffect(() => {
+    if (!entries.length) return;
+
+    const entryId = localStorage.getItem("activeJournalEntry");
+
+    if (entryId) {
+      const index = entries.findIndex(e => e.id === entryId);
+
+      if (index !== -1 && flipBook.current) {
+        // +1 because page 0 is the cover
+        flipBook.current.pageFlip().flip(index + 1);
+      }
+
+      localStorage.removeItem("activeJournalEntry");
+    }
+  }, [entries]);
+
   const loadJournalData = async () => {
     setIsLoading(true);
     try {
@@ -65,6 +83,8 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       setIsLoading(false);
     }
   };
+
+  
 
   // API Calls
   const fetchJournalSettings = async (): Promise<JournalSettings> => {
@@ -218,10 +238,13 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   };
 
   const handleChatClick = (entryId: string) => {
-    // Navigate to chat tab with this entry linked
-    window.dispatchEvent(new CustomEvent('openChat', { detail: { entryId } }));
-    setShowChatSuggestion(false);
-  };
+  window.dispatchEvent(
+    new CustomEvent("startChatFromJournal", {
+      detail: { entryId }
+    })
+  );
+  setShowChatSuggestion(false);
+};
 
   const onFlip = (e: any) => {
     console.log('Current page: ' + e.data);

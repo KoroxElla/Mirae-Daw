@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface Message {
@@ -19,11 +17,9 @@ interface ChatSession {
   messages: Message[];
 }
 
-interface ChatPageProps {
-  userId: string;
-}
+interface ChatPageProps {}
 
-export default function ChatPage({ userId }: ChatPageProps) {
+export default function ChatPage({}: ChatPageProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [inputMessage, setInputMessage] = useState('');
@@ -32,12 +28,31 @@ export default function ChatPage({ userId }: ChatPageProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [showHotline, setShowHotline] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
 
+  const goBackToJournal = () => {
+    if (!activeSession?.linkedEntryId) return;
+
+    localStorage.setItem("activeJournalEntry", activeSession.linkedEntryId);
+
+    window.dispatchEvent(
+      new CustomEvent("goToJournalEntry", {
+        detail: { entryId: activeSession.linkedEntryId }
+      })
+    );
+  };
+
+  useEffect(() => {
+    const chatId = localStorage.getItem("activeChatId");
+
+    if (chatId) {
+      loadSession(chatId);
+      localStorage.removeItem("activeChatId");
+    }
+  }, []);
+  
   // 🎤 Voice setup
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -66,29 +81,43 @@ export default function ChatPage({ userId }: ChatPageProps) {
     loadSessions();
   }, []);
 
-  // Check for journal entry chat start
-  useEffect(() => {
-    const entryId = localStorage.getItem("chatEntryId");
-    if (entryId) {
-      startChatWithEntry(entryId);
-      localStorage.removeItem("chatEntryId");
-    }
-  }, []);
+  
   
   // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages]);
 
-  // Check for journal entry chat start via URL
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const entryId = params.get("entryId");
+    const handler = async (event: any) => {
+      const entryId = event.detail?.entryId;
 
-    if (entryId) {
-      startChatWithEntry(entryId);
-    }
-  }, [location.search]);
+      if (!entryId) return;
+
+      const token = localStorage.getItem("token");
+
+      // create chat linked to entry
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ linkedEntryId: entryId })
+      });
+
+      const data = await res.json();
+
+      // store mapping
+      localStorage.setItem(`chat_${data.id}_entry`, entryId);
+
+      // load chat
+      loadSession(data.id);
+    };
+
+    window.addEventListener("startChatFromJournal", handler);
+    return () => window.removeEventListener("startChatFromJournal", handler);
+  }, []);
 
   
 
@@ -326,7 +355,7 @@ export default function ChatPage({ userId }: ChatPageProps) {
             <div className="flex items-center gap-2">
               {activeSession?.linkedEntryId ? (
                 <button
-                  onClick={() => navigate(`/journal?entryId=${activeSession.linkedEntryId}`)}
+                  onClick={goBackToJournal}
                   className="text-xs sm:text-sm text-purple-300 underline"
                 >
                   📖 Back to Journal

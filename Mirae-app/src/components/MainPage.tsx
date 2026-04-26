@@ -33,6 +33,7 @@ export default function MainPage({
   const [isInitialized, setIsInitialized] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   
   // Use ref to track if we've already set initial scene
   const initialSceneSetRef = useRef(false);
@@ -96,12 +97,33 @@ export default function MainPage({
 
   // Listen for journal chat events
   useEffect(() => {
-    const handler = () => {
+    const handler = (event: any) => {
+      const chatId = event.detail?.chatId;
+
+      if (chatId) {
+        setActiveChatId(chatId);
+      }
+
       setActiveTab("chat");
     };
 
     window.addEventListener("startChatFromJournal", handler);
     return () => window.removeEventListener("startChatFromJournal", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: any) => {
+      const entryId = event.detail?.entryId;
+
+      if (entryId) {
+        localStorage.setItem("activeJournalEntry", entryId);
+      }
+
+      setActiveTab("journal");
+    };
+
+    window.addEventListener("goToJournalEntry", handler);
+    return () => window.removeEventListener("goToJournalEntry", handler);
   }, []);
 
 
@@ -178,7 +200,7 @@ export default function MainPage({
       case "reminisce":
         return <ReminiscePage userId={userId} />;
       case "chat":
-        return <ChatPage userId={userId || ''}/>;
+        return <ChatPage/>;
       default:
         return null;
     }

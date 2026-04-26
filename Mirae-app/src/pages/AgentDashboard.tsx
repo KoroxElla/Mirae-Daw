@@ -33,7 +33,7 @@ const EMOTION_COLORS = {
   neutral: '#A0A0A0'
 };
 
-export default function AgentDashboard({ agentId }: AgentDashboardProps) {
+export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -116,7 +116,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
           },
           body: JSON.stringify({
             token: tokenInput,
-            userId: selectedUser.id   // ✅ REQUIRED
+            userId: selectedUser.id  
           })
         }
       );
@@ -170,7 +170,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
         }).then(r => r.json())
       ]);
       
-      setEmotionData(emotions.data);
+      setEmotionData(emotions.data || emotions);
       setJournalEntries(journals);
       setChatSessions(chats);
     } catch (error) {
@@ -189,7 +189,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
   };
 
   // Emotion distribution for pie chart
-  const emotionDistribution = emotionData.reduce((acc, day) => {
+  const emotionDistribution = (emotionData || []).reduce((acc, day) => {
     Object.entries(day).forEach(([emotion, count]) => {
       if (emotion !== 'date' && typeof count === 'number') {
         acc[emotion] = (acc[emotion] || 0) + count;
@@ -338,7 +338,7 @@ export default function AgentDashboard({ agentId }: AgentDashboardProps) {
                 <h3 className="font-semibold mb-4">Emotion Timeline</h3>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={emotionData}>
+                    <LineChart data={emotionData || []}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 11 }} />
                       <YAxis />
