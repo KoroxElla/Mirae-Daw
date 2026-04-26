@@ -46,13 +46,6 @@ def update_user(user_id):
     return jsonify({"success": True})
 
 
-# Update user settings
-@user_bp.route("/preferences", methods=["GET"])
-@require_auth
-def get_preferences(user_id):
-    doc = db.collection("users").document(user_id).get()
-    return jsonify(doc.to_dict().get("preferences", {}))
-
 # Get user profile
 @user_bp.route("/profile", methods=["GET"])
 @require_auth
@@ -76,7 +69,7 @@ def get_profile(user_id):
     }), 200
 
 # Get user settings
-@user_bp.route("/user/settings", methods=["GET"])
+@user_bp.route("/settings", methods=["GET"])
 @require_auth
 def get_settings(user_id):
     doc = db.collection("users").document(user_id).collection("meta").document("settings").get()
@@ -93,7 +86,7 @@ def get_settings(user_id):
     }), 200
 
 # Update user settings
-@user_bp.route("/user/settings", methods=["PUT"])
+@user_bp.route("/settings", methods=["PUT"])
 @require_auth
 def update_settings(user_id):
     data = request.json
@@ -105,7 +98,7 @@ def update_settings(user_id):
     return jsonify({"success": True}), 200
 
 # Get user preferences
-@user_bp.route("/user/preferences", methods=["GET"])
+@user_bp.route("/preferences", methods=["GET"])
 @require_auth
 def get_preferences(user_id):
     doc = db.collection("users").document(user_id).collection("meta").document("preferences").get()
@@ -121,7 +114,7 @@ def get_preferences(user_id):
     }), 200
 
 # Update user preferences
-@user_bp.route("/user/preferences", methods=["PUT"])
+@user_bp.route("/preferences", methods=["PUT"])
 @require_auth
 def update_preferences(user_id):
     data = request.json
