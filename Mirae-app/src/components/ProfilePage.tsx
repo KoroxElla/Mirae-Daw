@@ -21,6 +21,7 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!userId) return;
     loadProfile();
   }, [userId]);
 
@@ -30,6 +31,8 @@ export default function ProfilePage({ userId, onClose }: ProfilePageProps) {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      console.log("PROFILE STATUS:", response.status);
+      console.log("TOKEN:", token);
 
       if (response.ok) {
         const data = await response.json();

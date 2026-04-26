@@ -50,22 +50,7 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
   }, [userId]);
 
   // Flip to the last active entry if it exists
-  useEffect(() => {
-    if (!entries.length) return;
-
-    const entryId = localStorage.getItem("activeJournalEntry");
-
-    if (entryId) {
-      const index = entries.findIndex(e => e.id === entryId);
-
-      if (index !== -1 && flipBook.current) {
-        // +1 because page 0 is the cover
-        flipBook.current.pageFlip().flip(index + 1);
-      }
-
-      localStorage.removeItem("activeJournalEntry");
-    }
-  }, [entries]);
+  
 
   const loadJournalData = async () => {
     setIsLoading(true);
@@ -106,6 +91,8 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
     if (!response.ok) throw new Error('Failed to fetch entries');
     return response.json();
   };
+
+  
 
   const saveJournalEntry = async (text: string): Promise<any> => {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/journal/save`, {
@@ -261,6 +248,24 @@ const JournalBook: React.FC<JournalBookProps> = ({ userId }) => {
       flipBook.current.pageFlip().flipPrev();
     }
   };
+
+  useEffect(() => {
+    const entryId = localStorage.getItem("activeJournalEntry");
+
+    if (!entryId || entries.length === 0 || !flipBook.current) return;
+
+    const index = entries.findIndex(e => e.id === entryId);
+
+    if (index !== -1) {
+      // +1 because of cover page
+      const book = flipBook.current?.pageFlip();
+      if (book) {
+        book.flip(index + 1);
+      }
+    }
+
+    localStorage.removeItem("activeJournalEntry");
+  }, [entries]);
 
   if (isLoading) {
     return (

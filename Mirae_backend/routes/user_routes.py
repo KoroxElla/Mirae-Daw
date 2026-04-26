@@ -50,7 +50,13 @@ def update_user(user_id):
 @user_bp.route("/profile", methods=["GET"])
 @require_auth
 def get_profile(user_id):
-    user = get_user_by_id(user_id)
+    doc = db.collection("users").document(user_id).get()
+
+    if not doc.exists:
+        return jsonify({"error": "User not found"}), 404
+
+    user = doc.to_dict()
+    user["id"] = doc.id
 
     journals_ref = db.collection("users").document(user_id).collection("journals")
     chats_ref = db.collection("users").document(user_id).collection("chats")
