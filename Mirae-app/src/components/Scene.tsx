@@ -19,6 +19,7 @@ export default function Scene({ url, onLoad }: SceneProps) {
     setProcessedScene(null);
 
     console.log("Processing scene:", url);
+    const isHappyScene = url.includes("joy") || url.includes("happy");
 
     const cloned = scene.clone(true);
 
@@ -30,13 +31,17 @@ export default function Scene({ url, onLoad }: SceneProps) {
     box.getCenter(center);
 
     cloned.position.sub(center);
-    cloned.position.y +=5;
+    cloned.position.y += isHappyScene ? 2 : 5;
     cloned.position.x +=9.5;
     cloned.position.z +=3.5
     cloned.rotation.y = Math.PI / 2;
 
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = (2 / maxDim) * 25;
+    let scale = (2 / maxDim) * 25;
+
+    if (isHappyScene) {
+      scale *= 1.2; 
+    }
     cloned.scale.setScalar(scale);
 
     cloned.traverse((child) => {
