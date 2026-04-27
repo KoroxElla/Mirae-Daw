@@ -31,16 +31,16 @@ export default function Scene({ url, onLoad }: SceneProps) {
     box.getCenter(center);
 
     cloned.position.sub(center);
-    cloned.position.y += isHappyScene ? -5 : 5;
+    cloned.position.y += isHappyScene ? -7 : 5;
     cloned.position.x +=9.5;
-    cloned.position.z +=3.5
+    cloned.position.z += isHappyScene ? 1 :3.5
     cloned.rotation.y = Math.PI / 2;
 
     const maxDim = Math.max(size.x, size.y, size.z);
     let scale = (2 / maxDim) * 25;
 
     if (isHappyScene) {
-      scale *= 1; 
+      scale *= 0.5; 
     }
     cloned.scale.setScalar(scale);
 
