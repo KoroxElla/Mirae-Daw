@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { JournalEntry } from './types';
 import { motion } from 'framer-motion';
 import { decryptText, isEncrypted } from '../../utils/decryption';
-import { useNavigate } from "react-router-dom";
+
 
 interface Props {
   entry?: JournalEntry;
@@ -14,7 +14,6 @@ const JournalPage: React.FC<Props> = ({ entry, onEdit, onDelete }) => {
   const [displayText, setDisplayText] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   
 
