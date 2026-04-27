@@ -40,7 +40,7 @@ export default function Scene({ url, onLoad }: SceneProps) {
     let scale = (2 / maxDim) * 25;
 
     if (isHappyScene) {
-      scale *= 1.2; 
+      scale *= 1; 
     }
     cloned.scale.setScalar(scale);
 
