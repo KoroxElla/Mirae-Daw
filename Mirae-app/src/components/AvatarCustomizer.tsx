@@ -17,6 +17,12 @@ export default function AvatarCustomizer({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    window.onerror = (msg, url, line, col, error) => {
+      console.error("GLOBAL ERROR:", error);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!containerRef.current) return;
 
     const sdk = new AvaturnSDK();
@@ -24,7 +30,10 @@ export default function AvatarCustomizer({
     const subdomain = "miraedaw";
     const url = `https://${subdomain}.avaturn.dev`;
 
+    let isMounted = true;
+
     sdk.init(containerRef.current, { url }).then(() => {
+      if (!isMounted) return;
 
       sdk.on("export", async (data) => {
         try {
@@ -34,8 +43,8 @@ export default function AvatarCustomizer({
           const user = auth.currentUser;
           if (!user) return;
 
-          // Convert base64 to blob safely
           const fileResponse = await fetch(data.url);
+          console.log("Export data:", data);
           const blob = await fileResponse.blob();
 
           const storageRef = ref(storage, `avatars/${user.uid}.glb`);
@@ -43,7 +52,7 @@ export default function AvatarCustomizer({
           await uploadBytes(storageRef, blob);
           const downloadURL = await getDownloadURL(storageRef);
 
-          const backendResponse = await fetch(`${import.meta.env.VITE_API_URL}/avatar/save`, {
+          await fetch(`${import.meta.env.VITE_API_URL}/avatar/save`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -51,20 +60,22 @@ export default function AvatarCustomizer({
             },
             body: JSON.stringify({ avatarUrl: downloadURL }),
           });
-          if (!backendResponse.ok) {
-            const text = await backendResponse.text();
-            console.error("Backend error:", text);
-          }
-          console.log("✅ Avatar saved successfully");
+
           onSave({ avatarUrl: downloadURL });
 
         } catch (error) {
           console.error("Failed to save avatar:", error);
         }
       });
-
     });
 
+    return () => {
+      isMounted = false;
+      // 👇 Important: destroy SDK if possible
+      if (sdk && typeof sdk.destroy === "function") {
+        sdk.destroy();
+      }
+    };
   }, []);
 
   return (
