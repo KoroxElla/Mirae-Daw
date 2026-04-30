@@ -11,13 +11,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarData, setAvatarData] = useState<any>(null);
-
   const navigate = useNavigate();
-
   const handleCustomize = () => {
     console.log("Navigating to avatar...");
     navigate("/avatar");
-  };
+};
+
+
 
   useEffect(() => {
     const checkAuthAndRole = async () => {

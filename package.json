@@ -1,5 +1,9 @@
 {
   "dependencies": {
+    "firebase": "^12.12.1",
     "react-router-dom": "^7.14.2"
+  },
+  "devDependencies": {
+    "@types/react-dom": "^19.2.3"
   }
 }
