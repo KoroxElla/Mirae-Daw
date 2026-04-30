@@ -3,6 +3,7 @@ import Homepage from "./components/Homepage";
 import MainPage from "./components/MainPage";
 import AgentDashboard from './pages/AgentDashboard';
 import { AvatarProvider } from './contexts/AvatarContext';
+import { useNavigate } from "react-router-dom";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,6 +11,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarData, setAvatarData] = useState<any>(null);
+
+  const navigate = useNavigate();
+
+  const handleCustomize = () => {
+    console.log("Navigating to avatar...");
+    navigate("/avatar");
+  };
 
   useEffect(() => {
     const checkAuthAndRole = async () => {
@@ -133,7 +141,7 @@ export default function App() {
     <AvatarProvider>
       <MainPage
         avatarData={avatarData}
-        onCustomize={() => {}}
+        onCustomize={handleCustomize}
         onLogout={handleLogout}
       />
     </AvatarProvider>
