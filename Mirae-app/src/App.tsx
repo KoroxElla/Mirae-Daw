@@ -3,7 +3,7 @@ import Homepage from "./components/Homepage";
 import MainPage from "./components/MainPage";
 import AgentDashboard from './pages/AgentDashboard';
 import { AvatarProvider } from './contexts/AvatarContext';
-import { useNavigate } from "react-router-dom";
+import AvatarCustomizer from "./components/AvatarCustomizer";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,10 +11,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarData, setAvatarData] = useState<any>(null);
-  const navigate = useNavigate();
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const handleCustomize = () => {
-    console.log("Navigating to avatar...");
-    navigate("/avatar");
+    console.log("Opening customizer...");
+    setShowCustomizer(true);
 };
 
 
@@ -138,12 +138,24 @@ export default function App() {
 
   // Regular user - redirect to MainPage
   return (
-    <AvatarProvider>
-      <MainPage
-        avatarData={avatarData}
-        onCustomize={handleCustomize}
-        onLogout={handleLogout}
-      />
-    </AvatarProvider>
+    <>
+      <AvatarProvider>
+        <MainPage
+          avatarData={avatarData}
+          onCustomize={handleCustomize}
+          onLogout={handleLogout}
+        />
+      </AvatarProvider>
+
+      {showCustomizer && (
+        <AvatarCustomizer
+          onSave={(data) => {
+            setAvatarData(data);
+            setShowCustomizer(false);
+          }}
+          onClose={() => setShowCustomizer(false)}
+        />
+      )}
+    </>
   );
 }
