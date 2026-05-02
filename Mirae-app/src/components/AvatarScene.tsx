@@ -110,7 +110,7 @@ export default function AvatarScene({
       <Sky sunPosition={[5, 10, 5]} />
 
       {/* 🌍 SCENE (optional, non-blocking) */}
-      {currentSceneUrl && (<Scene key={currentSceneUrl} url={currentSceneUrl} onLoad={handleSceneLoad}/>)}
+      {currentSceneUrl && (<Scene key={currentSceneUrl} url={currentSceneUrl} emotion={currentEmotion} onLoad={handleSceneLoad}/>)}
 
       {/* 🧍 AVATAR (always renders) */}
       {avatarData?.avatarUrl && (

@@ -11,11 +11,19 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarData, setAvatarData] = useState<any>(null);
+<<<<<<< HEAD
+  const navigate = useNavigate();
+  const handleCustomize = () => {
+    console.log("Navigating to avatar...");
+    navigate("/avatar");
+};
+=======
   const [showCustomizer, setShowCustomizer] = useState(false);
   const handleCustomize = () => {
     console.log("Opening customizer...");
     setShowCustomizer(true);
 };
+>>>>>>> 20d8a0d2194fe689c883ad65dc9a41385354f302
 
 
 

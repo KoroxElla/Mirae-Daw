@@ -1,77 +1,45 @@
 import { useGLTF } from "@react-three/drei";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { SCENE_ADJUSTMENTS } from "../types/sceneConfig";
 
 interface SceneProps {
   url: string;
+  emotion: string;
   onLoad?: () => void;
 }
 
-export default function Scene({ url, onLoad }: SceneProps) {
+export default function Scene({ url, emotion, onLoad }: SceneProps) {
   const { scene } = useGLTF(url);
-  const [loaded, setLoaded] = useState(false);
   const onLoadCalledRef = useRef(false);
   const [processedScene, setProcessedScene] = useState<THREE.Object3D | null>(null);
 
+  const config =
+    SCENE_ADJUSTMENTS[emotion] || SCENE_ADJUSTMENTS["neutral"];
 
   useEffect(() => {
     if (!scene) return;
-    setProcessedScene(null);
 
-    console.log("Processing scene:", url);
-    const isHappyScene = url.includes("joy") || url.includes("happy");
+    console.log("Loading scene:", url);
 
     const cloned = scene.clone(true);
 
-    const box = new THREE.Box3().setFromObject(cloned);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-
-    box.getSize(size);
-    box.getCenter(center);
-
-    cloned.position.sub(center);
-    cloned.position.y += isHappyScene ? -7 : 5;
-    cloned.position.x +=9.5;
-    cloned.position.z += isHappyScene ? 1 :3.5
-    cloned.rotation.y = Math.PI / 2;
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    let scale = (2 / maxDim) * 25;
-
-    if (isHappyScene) {
-      scale *= 0.5; 
-    }
-    cloned.scale.setScalar(scale);
-
-    cloned.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-
-        if (mesh.material) {
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat) => {
-              mat.side = THREE.DoubleSide;
-            });
-          } else {
-            mesh.material.side = THREE.DoubleSide;
-          }
-        }
-      }
-    });
-
     setProcessedScene(cloned);
-
-    console.log("Scene processed and ready");
 
     if (!onLoadCalledRef.current && onLoad) {
       onLoadCalledRef.current = true;
       onLoad();
     }
-
   }, [scene, url]);
 
   if (!processedScene) return null;
 
-  return <primitive object={processedScene} />;
+  return (
+    <primitive
+      object={processedScene}
+      position={config.pos}
+      scale={config.scale}
+      rotation={[0, config.rotY, 0]}
+    />
+  );
 }
