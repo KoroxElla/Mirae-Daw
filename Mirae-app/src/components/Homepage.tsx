@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { auth } from "../firebase";
+import { useState, useEffect } from "react";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -7,6 +6,7 @@ import {
   GoogleAuthProvider,
   getAuth,
 } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 interface HomepageProps {
   onAuthSuccess: () => void;
@@ -71,6 +71,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   
   const firebaseAuth = getAuth();
+  const navigate = useNavigate();
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -444,6 +445,12 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
                   </div>
                   <FieldError message={passwordError} />
                 </div>
+                <span
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-sm text-purple-600 cursor-pointer hover:underline"
+                >
+                  Forgot password?
+                </span>
 
                 <button
                   onClick={handleLogin}

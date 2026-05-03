@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Homepage from "./components/Homepage";
 import MainPage from "./components/MainPage";
 import AgentDashboard from './pages/AgentDashboard';
 import { AvatarProvider } from './contexts/AvatarContext';
 import AvatarCustomizer from "./components/AvatarCustomizer";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,7 +19,7 @@ export default function App() {
   const handleCustomize = () => {
     console.log("Opening customizer...");
     setShowCustomizer(true);
-};
+  };
 
 
 
@@ -156,6 +160,12 @@ export default function App() {
           onClose={() => setShowCustomizer(false)}
         />
       )}
+      <Router>
+        <Routes>
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+        </Routes>
+      </Router>
     </>
   );
 }

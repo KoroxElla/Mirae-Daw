@@ -77,7 +77,7 @@ export default function AvatarScene({
 
   return (
     <Canvas
-      camera={{ position: [0, 1.6, 2.5], fov: 35 }}
+      camera={{ position: [0, 1.5, 6.0], fov: 60 }}
       style={{ width: "100%", height: "100%" }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       onCreated={({ gl, scene }) => {
