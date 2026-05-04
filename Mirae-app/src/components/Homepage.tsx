@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider,
   getAuth,
 } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 interface HomepageProps {
   onAuthSuccess: () => void;
@@ -208,6 +208,7 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
       setTimeout(() => {
         onAuthSuccess();
       }, 1000);
+      navigate("/", { replace: true });
 
     } catch (error: any) {
       setIsTransitioning(false);
@@ -445,11 +446,8 @@ export default function Homepage({ onAuthSuccess }: HomepageProps) {
                   </div>
                   <FieldError message={passwordError} />
                 </div>
-                <span
-                  onClick={() => navigate("/forgot-password")}
-                  className="text-sm text-purple-600 cursor-pointer hover:underline"
-                >
-                  Forgot password?
+                <span className="text-sm text-purple-600 hover:underline cursor-pointer">
+                  <Link to="/forgot-password">Forgot password?</Link>
                 </span>
 
                 <button

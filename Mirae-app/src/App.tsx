@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Homepage from "./components/Homepage";
 import MainPage from "./components/MainPage";
 import AgentDashboard from './pages/AgentDashboard';
@@ -6,9 +7,57 @@ import { AvatarProvider } from './contexts/AvatarContext';
 import AvatarCustomizer from "./components/AvatarCustomizer";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+// Separate component for authenticated app content
+function AuthenticatedApp({ 
+  userRole, 
+  userId, 
+  avatarData, 
+  onCustomize, 
+  onLogout,
+  showCustomizer,
+  setShowCustomizer,
+  setAvatarData
+}: { 
+  userRole: 'user' | 'agent' | null;
+  userId: string | null;
+  avatarData: any;
+  onCustomize: () => void;
+  onLogout: () => void;
+  showCustomizer: boolean;
+  setShowCustomizer: (show: boolean) => void;
+  setAvatarData: (data: any) => void;
+}) {
+  // Agent logged in - redirect to Agent Dashboard
+  if (userRole === 'agent') {
+    return <AgentDashboard agentId={userId || ''} onLogout={onLogout} />;
+  }
 
+  // Regular user - show MainPage
+  return (
+    <>
+      <AvatarProvider>
+        <MainPage
+          avatarData={avatarData}
+          onCustomize={onCustomize}
+          onLogout={onLogout}
+        />
+      </AvatarProvider>
+
+      {showCustomizer && (
+        <AvatarCustomizer
+          onSave={(data) => {
+            setAvatarData(data);
+            setShowCustomizer(false);
+          }}
+          onClose={() => setShowCustomizer(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// Main App component with Router at the top level
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<'user' | 'agent' | null>(null);
@@ -16,12 +65,12 @@ export default function App() {
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarData, setAvatarData] = useState<any>(null);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const navigate = useNavigate();
+
   const handleCustomize = () => {
     console.log("Opening customizer...");
     setShowCustomizer(true);
   };
-
-
 
   useEffect(() => {
     const checkAuthAndRole = async () => {
@@ -32,7 +81,6 @@ export default function App() {
         setIsLoading(false);
         return;
       }
-      
 
       try {
         // Verify token and get role from backend
@@ -120,6 +168,7 @@ export default function App() {
     setIsAuthenticated(false);
     setUserRole(null);
     setUserId(null);
+    navigate("/login")
   };
 
   if (isLoading) {
@@ -130,42 +179,50 @@ export default function App() {
     );
   }
 
-  // Not logged in
-  if (!isAuthenticated) {
-    return <Homepage onAuthSuccess={handleAuthSuccess} />;
-  }
-
-  // Agent logged in - redirect to Agent Dashboard
-  if (userRole === 'agent') {
-    return <AgentDashboard agentId={userId || ''} onLogout={handleLogout}/>;
-  }
-
-  // Regular user - redirect to MainPage
   return (
-    <>
-      <AvatarProvider>
-        <MainPage
-          avatarData={avatarData}
-          onCustomize={handleCustomize}
-          onLogout={handleLogout}
+    <Router>
+      <Routes>
+        {/* Public routes */}
+        <Route 
+          path="/forgot-password" 
+          element={<ForgotPassword />} 
         />
-      </AvatarProvider>
-
-      {showCustomizer && (
-        <AvatarCustomizer
-          onSave={(data) => {
-            setAvatarData(data);
-            setShowCustomizer(false);
-          }}
-          onClose={() => setShowCustomizer(false)}
+        <Route 
+          path="/reset-password" 
+          element={<ResetPassword />} 
         />
-      )}
-      <Router>
-        <Routes>
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Routes>
-      </Router>
-    </>
+        
+        {/* Auth routes */}
+        <Route 
+          path="/login" 
+          element={
+            !isAuthenticated ? 
+              <Homepage onAuthSuccess={handleAuthSuccess} /> : 
+              <Navigate to="/" replace />
+          } 
+        />
+        
+        {/* Protected routes */}
+        <Route 
+          path="/*" 
+          element={
+            isAuthenticated ? (
+              <AuthenticatedApp
+                userRole={userRole}
+                userId={userId}
+                avatarData={avatarData}
+                onCustomize={handleCustomize}
+                onLogout={handleLogout}
+                showCustomizer={showCustomizer}
+                setShowCustomizer={setShowCustomizer}
+                setAvatarData={setAvatarData}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+      </Routes>
+    </Router>
   );
 }
