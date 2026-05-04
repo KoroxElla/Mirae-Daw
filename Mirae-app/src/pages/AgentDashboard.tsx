@@ -25,6 +25,14 @@ interface AgentDashboardProps {
   onLogout: () => void;
 }
 
+interface AgentNote {
+  id: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  userId?: string;
+}
+
 const EMOTION_COLORS = {
   joy: '#FFD93D',
   sadness: '#4D96FF',
@@ -46,11 +54,13 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | '3months'>('month');
-  const [accessTokens, setAccessTokens] = useState<Map<string, string>>(new Map()); 
-  const [selectedUserId, setSelectedUserId] = useState('');
-  
+  const [accessTokens, setAccessTokens] = useState<Map<string, string>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
+  const [notes, setNotes] = useState<AgentNote[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  // Load existing accessed users from localStorage
+  // Load saved data from localStorage
   useEffect(() => {
     const savedUsers = localStorage.getItem(`agent_${agentId}_users`);
     if (savedUsers) {
@@ -58,8 +68,27 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
       setUsers(parsedUsers);
       setFilteredUsers(parsedUsers);
     }
+    
+    const savedTokens = localStorage.getItem(`agent_${agentId}_tokens`);
+    if (savedTokens) {
+      const parsedTokens = JSON.parse(savedTokens);
+      setAccessTokens(new Map(parsedTokens));
+    }
+    
+    const savedNotes = localStorage.getItem(`agent_${agentId}_notes`);
+    if (savedNotes) {
+      setNotes(JSON.parse(savedNotes));
+    }
   }, [agentId]);
 
+  // Save notes to localStorage
+  useEffect(() => {
+    if (notes.length > 0) {
+      localStorage.setItem(`agent_${agentId}_notes`, JSON.stringify(notes));
+    }
+  }, [notes, agentId]);
+
+  // Fetch data when selected user changes
   useEffect(() => {
     if (selectedUser) {
       fetchUserData();
@@ -70,15 +99,14 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
     setSearchQuery(query);
 
     if (!query.trim()) {
-      setFilteredUsers([]);
+      setFilteredUsers(users);
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
-
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/agent/users/search?q=${query}`,
+        `${import.meta.env.VITE_API_URL}/agent/users/search?q=${encodeURIComponent(query)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -86,22 +114,26 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
         }
       );
 
-      const data = await res.json();
-      setFilteredUsers(data);
+      if (res.ok) {
+        const data = await res.json();
+        setFilteredUsers(data);
+      } else {
+        setFilteredUsers(users.filter(user => 
+          user.displayName?.toLowerCase().includes(query.toLowerCase()) ||
+          user.email?.toLowerCase().includes(query.toLowerCase())
+        ));
+      }
     } catch (err) {
       console.error("Search failed:", err);
+      setFilteredUsers(users.filter(user => 
+        user.displayName?.toLowerCase().includes(query.toLowerCase()) ||
+        user.email?.toLowerCase().includes(query.toLowerCase())
+      ));
     }
   };
 
-  const handleAddUser = async () => {
-    setShowTokenModal(true);
-    setTokenInput('');
-    setTokenError('');
-  };
-
-
   const verifyToken = async () => {
-    if (!selectedUser) return;
+    if (!tokenInput.trim()) return;
 
     setIsVerifying(true);
     setTokenError('');
@@ -115,37 +147,55 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            token: tokenInput,
-            userId: selectedUser.id  
+            token: tokenInput
           })
         }
       );
 
       if (response.ok) {
-        const data = await response.json();
+        const userData = await response.json();
+        
+        const newUser: User = {
+          id: userData.userId,
+          email: userData.email,
+          displayName: userData.displayName || userData.email,
+          createdAt: userData.createdAt || new Date().toISOString()
+        };
 
-        const updatedUsers = [...users, selectedUser];
-        setUsers(updatedUsers);
-        setFilteredUsers(updatedUsers);
+        // Check if user already exists
+        if (!users.some(u => u.id === newUser.id)) {
+          const updatedUsers = [...users, newUser];
+          setUsers(updatedUsers);
+          setFilteredUsers(updatedUsers);
+          
+          // Save users to localStorage
+          localStorage.setItem(
+            `agent_${agentId}_users`,
+            JSON.stringify(updatedUsers)
+          );
 
-        localStorage.setItem(
-          `agent_${agentId}_users`,
-          JSON.stringify(updatedUsers)
-        );
+          // Store token for this user
+          const newTokens = new Map(accessTokens);
+          newTokens.set(newUser.id, tokenInput);
+          setAccessTokens(newTokens);
+          
+          // Save tokens to localStorage
+          localStorage.setItem(
+            `agent_${agentId}_tokens`,
+            JSON.stringify(Array.from(newTokens.entries()))
+          );
+        }
 
-        // store token
-        const newTokens = new Map(accessTokens);
-        newTokens.set(selectedUser.id, tokenInput);
-        setAccessTokens(newTokens);
-
+        setSelectedUser(newUser);
         setShowTokenModal(false);
+        setTokenInput('');
       } else {
         const error = await response.json();
         setTokenError(error.error || "Invalid token");
       }
-
-    } catch {
-      setTokenError("Verification failed");
+    } catch (err) {
+      console.error("Verification error:", err);
+      setTokenError("Failed to verify token. Please check your connection.");
     } finally {
       setIsVerifying(false);
     }
@@ -155,26 +205,38 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
     if (!selectedUser) return;
     
     const token = accessTokens.get(selectedUser.id);
-    if (!token) return;
+    if (!token) {
+      console.error("No token found for user");
+      return;
+    }
+    
+    setIsLoading(true);
     
     try {
       const [emotions, journals, chats] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/agent/users/${selectedUser.id}/emotions?range=${timeRange}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json()),
-        fetch(`${import.meta.env.VITE_API_URL}/agent/users/${selectedUser.id}/journals`, {
+        }).then(r => r.ok ? r.json() : { data: [] }),
+        fetch(`${import.meta.env.VITE_API_URL}/agent/users/${selectedUser.id}/journals?decrypt=true`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json()),
+        }).then(r => r.ok ? r.json() : []),
         fetch(`${import.meta.env.VITE_API_URL}/agent/users/${selectedUser.id}/chats`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json())
+        }).then(r => r.ok ? r.json() : [])
       ]);
       
-      setEmotionData(emotions.data || emotions);
-      setJournalEntries(journals);
-      setChatSessions(chats);
+      setEmotionData(emotions.data || emotions || []);
+      setJournalEntries(journals || []);
+      setChatSessions(chats || []);
+      
+      // Load notes for this user
+      const userNotes = JSON.parse(localStorage.getItem(`agent_${agentId}_notes_${selectedUser.id}`) || '[]');
+      setNotes(userNotes);
+      
     } catch (error) {
       console.error('Error fetching user data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -183,8 +245,41 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
     setUsers(updatedUsers);
     setFilteredUsers(updatedUsers);
     localStorage.setItem(`agent_${agentId}_users`, JSON.stringify(updatedUsers));
+    
+    const newTokens = new Map(accessTokens);
+    newTokens.delete(userId);
+    setAccessTokens(newTokens);
+    localStorage.setItem(`agent_${agentId}_tokens`, JSON.stringify(Array.from(newTokens.entries())));
+    
     if (selectedUser?.id === userId) {
       setSelectedUser(null);
+    }
+  };
+
+  const saveNote = () => {
+    if (!newNote.trim() || !selectedUser) return;
+    
+    const note: AgentNote = {
+      id: Date.now().toString(),
+      content: newNote,
+      tags: selectedTags,
+      createdAt: new Date().toISOString(),
+      userId: selectedUser.id
+    };
+    
+    const updatedNotes = [note, ...notes];
+    setNotes(updatedNotes);
+    localStorage.setItem(`agent_${agentId}_notes_${selectedUser.id}`, JSON.stringify(updatedNotes));
+    
+    setNewNote("");
+    setSelectedTags([]);
+  };
+
+  const deleteNote = (noteId: string) => {
+    const updatedNotes = notes.filter(n => n.id !== noteId);
+    setNotes(updatedNotes);
+    if (selectedUser) {
+      localStorage.setItem(`agent_${agentId}_notes_${selectedUser.id}`, JSON.stringify(updatedNotes));
     }
   };
 
@@ -205,207 +300,332 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
   }));
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+      {/* Bubble Animation Background */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        {[...Array(30)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full animate-float"
+            style={{
+              width: `${Math.random() * 120 + 30}px`,
+              height: `${Math.random() * 120 + 30}px`,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              background: `radial-gradient(circle, rgba(147, 51, 234, ${Math.random() * 0.15 + 0.05}) 0%, rgba(147, 51, 234, 0) 70%)`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${Math.random() * 8 + 6}s`,
+              transform: `scale(${Math.random() * 0.8 + 0.5})`
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Mobile Menu Button */}
+      <div className="md:hidden fixed top-4 left-4 z-20">
+        <button
+          onClick={() => document.getElementById('sidebar')?.classList.toggle('hidden')}
+          className="bg-purple-600 text-white p-2 rounded-lg shadow-lg"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-lg flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-bold text-purple-600">Agent Dashboard</h2>
-          <p className="text-xs text-gray-500">Therapist/Admin View</p>
-        </div>
-        <button onClick={onLogout} className="text-sm bg-gray-200 px-3 py-1 rounded-full hover:bg-gray-300 transition-colors">
+      <div id="sidebar" className="fixed inset-y-0 left-0 w-80 bg-white shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-10 overflow-y-auto">
+        <div className="p-6 border-b bg-gradient-to-r from-purple-600 to-purple-700 text-white">
+          <h2 className="text-2xl font-bold">Agent Dashboard</h2>
+          <p className="text-purple-100 text-sm mt-1">Therapist & Admin View</p>
+          <button 
+            onClick={onLogout} 
+            className="mt-4 text-sm bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition-colors w-full"
+          >
             Logout
           </button>
+        </div>
         
         {/* Search Bar */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full border rounded-lg p-2 text-sm"
-          />
-
-          {searchQuery && filteredUsers.length > 0 && (
-            <div className="absolute w-full bg-white border rounded-lg mt-1 shadow-lg z-10 max-h-40 overflow-y-auto">
-              {filteredUsers.map(user => (
-                <div
-                  key={user.id}
-                  onClick={() => {
-                    setSelectedUser(user);
-                    setSearchQuery('');
-                  }}
-                  className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
-                >
-                  {user.displayName || user.email}
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="p-4 border-b">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search users by name or email..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full border rounded-lg p-3 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          
+          <button
+            onClick={() => setShowTokenModal(true)}
+            className="mt-3 w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+          >
+            + Add User with Token
+          </button>
         </div>
         
         {/* Users List */}
-        <div className="flex-1 overflow-y-auto">
-          <h3 className="text-xs font-semibold text-gray-500 px-4 pt-4 pb-2">ACCESSED USERS</h3>
-          <div className="space-y-1 px-2">
-            {filteredUsers.map(user => (
+        <div className="flex-1 p-4">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">ACCESSED USERS</h3>
+          <div className="space-y-2">
+            {(filteredUsers.length > 0 ? filteredUsers : users).map(user => (
               <div
                 key={user.id}
-                className={`group relative rounded-lg transition ${
+                className={`group relative rounded-lg transition-all duration-200 ${
                   selectedUser?.id === user.id
-                    ? 'bg-purple-100'
-                    : 'hover:bg-gray-100'
-                }`}
+                    ? 'bg-purple-100 border-purple-300'
+                    : 'hover:bg-gray-50 border-transparent'
+                } border`}
               >
                 <button
                   onClick={() => setSelectedUser(user)}
-                  className="w-full text-left px-3 py-2"
+                  className="w-full text-left p-3"
                 >
                   <p className="font-medium text-sm truncate">{user.displayName || user.email}</p>
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
                 </button>
                 <button
                   onClick={() => removeUser(user.id)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-500 text-xs"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity"
                 >
                   Remove
                 </button>
               </div>
             ))}
+            {users.length === 0 && (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-sm">No users added yet</p>
+                <p className="text-xs mt-1">Click "Add User with Token" to get started</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="ml-80 p-6">
-        {!selectedUser ? (
-          <div className="flex items-center justify-center h-full min-h-[500px]">
-            <div className="text-center">
-              <div className="text-6xl mb-4">👥</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No User Selected</h3>
-              <p className="text-gray-500">Search for a user or add a new one using their token</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h1 className="text-2xl font-bold">{selectedUser.displayName || selectedUser.email}</h1>
-                  <p className="text-gray-500 text-sm">{selectedUser.email}</p>
-                  <p className="text-xs text-gray-400 mt-1">Client since: {new Date(selectedUser.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div className="flex gap-3">
-                  <select
-                    value={timeRange}
-                    onChange={(e) => setTimeRange(e.target.value as any)}
-                    className="border rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="week">Last 7 days</option>
-                    <option value="month">Last 30 days</option>
-                    <option value="3months">Last 90 days</option>
-                  </select>
-                </div>
+      <div className="md:ml-80 min-h-screen">
+        <div className="p-4 md:p-8">
+          {!selectedUser ? (
+            <div className="flex items-center justify-center min-h-[500px]">
+              <div className="text-center max-w-md mx-auto">
+                <div className="text-8xl mb-6">👥</div>
+                <h3 className="text-2xl font-semibold text-gray-700 mb-3">No User Selected</h3>
+                <p className="text-gray-500 mb-6">Search for an existing user or add a new one using their access token</p>
+                <button
+                  onClick={() => setShowTokenModal(true)}
+                  className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Add User with Token
+                </button>
               </div>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-gray-500 text-sm">Total Journals</p>
-                <p className="text-2xl font-bold">{journalEntries.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-gray-500 text-sm">Chat Sessions</p>
-                <p className="text-2xl font-bold">{chatSessions.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-gray-500 text-sm">Most Common Emotion</p>
-                <p className="text-2xl font-bold capitalize">
-                  {Object.entries(emotionDistribution).sort((a,b) => b[1] - a[1])[0]?.[0] || 'N/A'}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-gray-500 text-sm">Active Days</p>
-                <p className="text-2xl font-bold">{emotionData.length}</p>
+          ) : isLoading ? (
+            <div className="flex items-center justify-center min-h-[500px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading user data...</p>
               </div>
             </div>
-
-            {/* Charts */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <h3 className="font-semibold mb-4">Emotion Timeline</h3>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={emotionData || []}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 11 }} />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="joy" stroke={EMOTION_COLORS.joy} strokeWidth={2} />
-                      <Line type="monotone" dataKey="sadness" stroke={EMOTION_COLORS.sadness} strokeWidth={2} />
-                      <Line type="monotone" dataKey="anger" stroke={EMOTION_COLORS.anger} strokeWidth={2} />
-                      <Line type="monotone" dataKey="anxiety" stroke={EMOTION_COLORS.anxiety} strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <h3 className="font-semibold mb-4">Emotion Distribution</h3>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={index} fill={EMOTION_COLORS[entry.emotion as keyof typeof EMOTION_COLORS]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Journal Entries */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-              <h3 className="font-semibold mb-4">Recent Journal Entries</h3>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {journalEntries.slice(0, 10).map(entry => (
-                  <div key={entry.id} className="border-b pb-3">
-                    <div className="flex justify-between text-sm text-gray-500 mb-1">
-                      <span>{new Date(entry.createdAt).toLocaleDateString()}</span>
-                      <span className="capitalize px-2 py-0.5 rounded bg-gray-100">
-                        {entry.primaryEmotion}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 line-clamp-2">{entry.text}</p>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{selectedUser.displayName || selectedUser.email}</h1>
+                    <p className="text-gray-500 text-sm mt-1">{selectedUser.email}</p>
+                    <p className="text-xs text-gray-400 mt-2">Client since: {new Date(selectedUser.createdAt).toLocaleDateString()}</p>
                   </div>
-                ))}
+                  <div className="flex gap-3">
+                    <select
+                      value={timeRange}
+                      onChange={(e) => setTimeRange(e.target.value as any)}
+                      className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="week">Last 7 days</option>
+                      <option value="month">Last 30 days</option>
+                      <option value="3months">Last 90 days</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-            </div>
-          </>
-        )}
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-gray-500 text-sm">Total Journals</p>
+                  <p className="text-2xl font-bold text-gray-800">{journalEntries.length}</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-gray-500 text-sm">Chat Sessions</p>
+                  <p className="text-2xl font-bold text-gray-800">{chatSessions.length}</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-gray-500 text-sm">Most Common Emotion</p>
+                  <p className="text-2xl font-bold capitalize text-gray-800">
+                    {Object.entries(emotionDistribution).sort((a,b) => b[1] - a[1])[0]?.[0] || 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-gray-500 text-sm">Active Days</p>
+                  <p className="text-2xl font-bold text-gray-800">{emotionData.length}</p>
+                </div>
+              </div>
+
+              {/* Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white rounded-xl shadow-sm p-4">
+                  <h3 className="font-semibold mb-4 text-gray-800">Emotion Timeline</h3>
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={emotionData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 11 }} />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="joy" stroke={EMOTION_COLORS.joy} strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="sadness" stroke={EMOTION_COLORS.sadness} strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="anger" stroke={EMOTION_COLORS.anger} strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="anxiety" stroke={EMOTION_COLORS.anxiety} strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-4">
+                  <h3 className="font-semibold mb-4 text-gray-800">Emotion Distribution</h3>
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          dataKey="value"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={index} fill={EMOTION_COLORS[entry.emotion as keyof typeof EMOTION_COLORS] || '#A0A0A0'} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Journal Entries */}
+              <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+                <h3 className="font-semibold mb-4 text-gray-800">Recent Journal Entries</h3>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {journalEntries.slice(0, 10).map(entry => (
+                    <div key={entry.id} className="border-b pb-3 last:border-0">
+                      <div className="flex justify-between text-sm text-gray-500 mb-2">
+                        <span>{new Date(entry.createdAt).toLocaleDateString()}</span>
+                        <span className="capitalize px-2 py-0.5 rounded-full bg-gray-100 text-xs">
+                          {entry.primaryEmotion}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 line-clamp-2">{entry.text || entry.content || "No content available"}</p>
+                    </div>
+                  ))}
+                  {journalEntries.length === 0 && (
+                    <p className="text-gray-400 text-center py-8">No journal entries found</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Agent Notes Section */}
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                <h3 className="font-semibold mb-4 text-gray-800">📝 Agent Notes</h3>
+
+                <textarea
+                  placeholder="Write observations about this user..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="w-full border rounded-lg p-3 mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  rows={3}
+                />
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {["journal", "chat", "emotion", "insight", "action"].map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() =>
+                        setSelectedTags(prev =>
+                          prev.includes(tag)
+                            ? prev.filter(t => t !== tag)
+                            : [...prev, tag]
+                        )
+                      }
+                      className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                        selectedTags.includes(tag)
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={saveNote}
+                  disabled={!newNote.trim()}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save Note
+                </button>
+
+                {/* Notes list */}
+                <div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
+                  {notes.length === 0 && (
+                    <p className="text-gray-400 text-center py-4">No notes yet. Add your first note above.</p>
+                  )}
+                  {notes.map(note => (
+                    <div key={note.id} className="bg-gray-50 rounded-lg p-3 relative group">
+                      <button
+                        onClick={() => deleteNote(note.id)}
+                        className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ✕
+                      </button>
+                      <p className="text-sm text-gray-700 pr-6">{note.content}</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {note.tags.map(tag => (
+                          <span key={tag} className="text-xs bg-white px-2 py-0.5 rounded-full text-purple-600">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(note.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Token Verification Modal */}
       {showTokenModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold mb-4">Enter User Access Token</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowTokenModal(false)}>
+          <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4 text-gray-800">Enter User Access Token</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Enter the token provided by the user to access their data.
+              Enter the access token provided by the user to view their data.
             </p>
             
             <input
@@ -413,7 +633,8 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
               placeholder="Paste token here..."
-              className="w-full border rounded-lg p-3 mb-4 focus:outline-none focus:border-purple-600"
+              className="w-full border rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              onKeyPress={(e) => e.key === 'Enter' && verifyToken()}
             />
             
             {tokenError && (
@@ -424,13 +645,13 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
               <button
                 onClick={verifyToken}
                 disabled={isVerifying || !tokenInput.trim()}
-                className="flex-1 bg-purple-600 text-white py-2 rounded-lg disabled:opacity-50"
+                className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
               >
                 {isVerifying ? 'Verifying...' : 'Verify & Add User'}
               </button>
               <button
                 onClick={() => setShowTokenModal(false)}
-                className="flex-1 border py-2 rounded-lg"
+                className="flex-1 border py-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
@@ -438,6 +659,27 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px) translateX(0px) rotate(0deg);
+          }
+          25% {
+            transform: translateY(-20px) translateX(10px) rotate(5deg);
+          }
+          50% {
+            transform: translateY(-40px) translateX(-10px) rotate(-5deg);
+          }
+          75% {
+            transform: translateY(-20px) translateX(5px) rotate(3deg);
+          }
+        }
+        
+        .animate-float {
+          animation: float ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
