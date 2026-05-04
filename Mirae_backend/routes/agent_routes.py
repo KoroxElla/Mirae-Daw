@@ -174,54 +174,75 @@ def get_agent_stats(agent_id):
         "active_users": len([u for u in users if u.get("createdAt")])
     }), 200
 
-@agent_bp.route("/verify-token", methods=["POST"])
+@agent_bp.route("/verify-token", methods=["POST", "OPTIONS"])
 def verify_agent_token():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "OK"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+        return response, 200
+
     data = request.json
     token = data.get("token")
 
     if not token:
-        return jsonify({"error": "Token required"}), 400
+        response = jsonify({"error": "Token required"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        return response, 400
 
     # First, validate the token exists and is active
     token_doc = db.collection("agent_tokens").document(token).get()
     
     if not token_doc.exists:
-        return jsonify({"error": "Token not found"}), 401
+        response = jsonify({"error": "Token not found"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        return response, 401
     
     token_data = token_doc.to_dict()
     
     # Check if token is active
     if not token_data.get("isActive", False):
-        return jsonify({"error": "Token has been revoked"}), 401
+        response = jsonify({"error": "Token has been revoked"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        return response, 401
     
     # Check if token has expired
     expires_at = token_data.get("expiresAt")
     if expires_at and expires_at < datetime.utcnow():
-        return jsonify({"error": "Token has expired"}), 401
+        response = jsonify({"error": "Token has expired"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        return response, 401
     
     # Get the user who created this token
     user_id = token_data.get("createdBy")
     if not user_id:
-        return jsonify({"error": "Invalid token - no associated user"}), 401
+        response = jsonify({"error": "Invalid token - no associated user"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        return response, 401
     
     # Get user details
     user = get_user_by_id(user_id)
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        response = jsonify({"error": "User not found"})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+        return response, 404
     
     # Update last used timestamp
     db.collection("agent_tokens").document(token).update({
         "lastUsed": datetime.utcnow()
     })
-    
+
     # Return user info and scopes
-    return jsonify({
+    response = jsonify({
         "userId": user["id"],
         "email": user.get("email"),
         "displayName": user.get("displayName"),
         "createdAt": user.get("createdAt"),
         "scopes": token_data.get("scopes", [])
-    }), 200
+    })
+    response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
+    return response, 200
 
 @agent_bp.route("/tokens/<token_id>/renew", methods=["PUT"])
 @require_auth
