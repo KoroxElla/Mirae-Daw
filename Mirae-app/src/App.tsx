@@ -180,7 +180,6 @@ export default function App() {
   }
 
   return (
-    <Router>
       <Routes>
         {/* Public routes */}
         <Route 
@@ -223,6 +222,5 @@ export default function App() {
           } 
         />
       </Routes>
-    </Router>
   );
 }
