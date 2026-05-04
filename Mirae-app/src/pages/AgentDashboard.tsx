@@ -95,6 +95,18 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
     }
   }, [selectedUser, timeRange]);
 
+  // Handle pending user from token modal
+  useEffect(() => {
+    if (showTokenModal) {
+      const pendingUser = localStorage.getItem(`pending_user_${agentId}`);
+      if (pendingUser) {
+        const user = JSON.parse(pendingUser);
+        setSelectedUser(user);
+        localStorage.removeItem(`pending_user_${agentId}`);
+      }
+    }
+  }, [showTokenModal, agentId]);
+
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
 
@@ -133,72 +145,109 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
   };
 
   const verifyToken = async () => {
-    if (!tokenInput.trim()) return;
-
-    setIsVerifying(true);
-    setTokenError('');
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/agent/verify-token`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            token: tokenInput
-          })
-        }
-      );
-
-      if (response.ok) {
-        const userData = await response.json();
-        
-        const newUser: User = {
-          id: userData.userId,
-          email: userData.email,
-          displayName: userData.displayName || userData.email,
-          createdAt: userData.createdAt || new Date().toISOString()
-        };
-
-        // Check if user already exists
-        if (!users.some(u => u.id === newUser.id)) {
-          const updatedUsers = [...users, newUser];
-          setUsers(updatedUsers);
-          setFilteredUsers(updatedUsers);
-          
-          // Save users to localStorage
-          localStorage.setItem(
-            `agent_${agentId}_users`,
-            JSON.stringify(updatedUsers)
-          );
-
-          // Store token for this user
-          const newTokens = new Map(accessTokens);
-          newTokens.set(newUser.id, tokenInput);
-          setAccessTokens(newTokens);
-          
-          // Save tokens to localStorage
-          localStorage.setItem(
-            `agent_${agentId}_tokens`,
-            JSON.stringify(Array.from(newTokens.entries()))
-          );
-        }
-
-        setSelectedUser(newUser);
-        setShowTokenModal(false);
-        setTokenInput('');
-      } else {
-        const error = await response.json();
-        setTokenError(error.error || "Invalid token");
+      if (!tokenInput.trim()) {
+          setTokenError("Please enter a token");
+          return;
       }
-    } catch (err) {
-      console.error("Verification error:", err);
-      setTokenError("Failed to verify token. Please check your connection.");
-    } finally {
-      setIsVerifying(false);
-    }
+
+      setIsVerifying(true);
+      setTokenError('');
+
+      try {
+          console.log("Verifying token:", tokenInput); // Debug log
+          
+          const response = await fetch(
+              `${import.meta.env.VITE_API_URL}/agent/verify-token`,
+              {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                      token: tokenInput.trim()
+                  })
+              }
+          );
+
+          const data = await response.json();
+          console.log("Verification response:", data); // Debug log
+
+          if (response.ok) {
+              const newUser: User = {
+                  id: data.userId,
+                  email: data.email,
+                  displayName: data.displayName || data.email,
+                  createdAt: data.createdAt || new Date().toISOString()
+              };
+
+              // Check if user already exists
+              if (!users.some(u => u.id === newUser.id)) {
+                  const updatedUsers = [...users, newUser];
+                  setUsers(updatedUsers);
+                  setFilteredUsers(updatedUsers);
+                  
+                  // Save users to localStorage
+                  localStorage.setItem(
+                      `agent_${agentId}_users`,
+                      JSON.stringify(updatedUsers)
+                  );
+
+                  // Store token for this user
+                  const newTokens = new Map(accessTokens);
+                  newTokens.set(newUser.id, tokenInput.trim());
+                  setAccessTokens(newTokens);
+                  
+                  // Save tokens to localStorage
+                  localStorage.setItem(
+                      `agent_${agentId}_tokens`,
+                      JSON.stringify(Array.from(newTokens.entries()))
+                  );
+                  
+                  console.log("User added successfully:", newUser);
+              } else {
+                  console.log("User already exists in list");
+              }
+
+              setSelectedUser(newUser);
+              setShowTokenModal(false);
+              setTokenInput('');
+              setTokenError('');
+          } else {
+              // Handle specific error messages
+              if (data.error === "Token not found") {
+                  setTokenError("Invalid token. Please check and try again.");
+              } else if (data.error === "Token has been revoked") {
+                  setTokenError("This token has been revoked and is no longer valid.");
+              } else if (data.error === "Token has expired") {
+                  setTokenError("This token has expired. Please ask the user to generate a new one.");
+              } else {
+                  setTokenError(data.error || "Invalid token. Please verify and try again.");
+              }
+          }
+      } catch (err) {
+          console.error("Verification error:", err);
+          setTokenError("Network error. Please check your connection and try again.");
+      } finally {
+          setIsVerifying(false);
+      }
+  };
+
+  const handleUserSelect = (user: User) => {
+      // Check if we already have a token for this user
+      const existingToken = accessTokens.get(user.id);
+      
+      if (existingToken) {
+          // If we already have a token, just select the user
+          setSelectedUser(user);
+          setSearchQuery('');
+      } else {
+          // If no token exists, prompt for token
+          setSelectedUser(user);
+          setShowTokenModal(true);
+          // Store the selected user temporarily
+          localStorage.setItem(`pending_user_${agentId}`, JSON.stringify(user));
+      }
+      setSearchQuery('');
   };
 
   const fetchUserData = async () => {
@@ -373,29 +422,18 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
         <div className="flex-1 p-4">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">ACCESSED USERS</h3>
           <div className="space-y-2">
-            {(filteredUsers.length > 0 ? filteredUsers : users).map(user => (
-              <div
-                key={user.id}
-                className={`group relative rounded-lg transition-all duration-200 ${
-                  selectedUser?.id === user.id
-                    ? 'bg-purple-100 border-purple-300'
-                    : 'hover:bg-gray-50 border-transparent'
-                } border`}
-              >
-                <button
-                  onClick={() => setSelectedUser(user)}
-                  className="w-full text-left p-3"
+            {filteredUsers.map(user => (
+                <div
+                    key={user.id}
+                    onClick={() => handleUserSelect(user)}
+                    className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-0 transition-colors"
                 >
-                  <p className="font-medium text-sm truncate">{user.displayName || user.email}</p>
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                </button>
-                <button
-                  onClick={() => removeUser(user.id)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity"
-                >
-                  Remove
-                </button>
-              </div>
+                    <p className="font-medium text-sm">{user.displayName || user.email}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                    {!accessTokens.has(user.id) && (
+                        <p className="text-xs text-orange-500 mt-1">⚠️ Token required for access</p>
+                    )}
+                </div>
             ))}
             {users.length === 0 && (
               <div className="text-center py-8 text-gray-400">

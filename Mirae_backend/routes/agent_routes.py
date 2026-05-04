@@ -182,23 +182,45 @@ def verify_agent_token():
     if not token:
         return jsonify({"error": "Token required"}), 400
 
-    scopes, error = validate_agent_token(token)
-    if error:
-        return jsonify({"error": error}), 401
-
+    # First, validate the token exists and is active
     token_doc = db.collection("agent_tokens").document(token).get()
+    
+    if not token_doc.exists:
+        return jsonify({"error": "Token not found"}), 401
+    
     token_data = token_doc.to_dict()
-
-    user_id = token_data.get("createdBy")  # ✅ GET USER FROM TOKEN
-
+    
+    # Check if token is active
+    if not token_data.get("isActive", False):
+        return jsonify({"error": "Token has been revoked"}), 401
+    
+    # Check if token has expired
+    expires_at = token_data.get("expiresAt")
+    if expires_at and expires_at < datetime.utcnow():
+        return jsonify({"error": "Token has expired"}), 401
+    
+    # Get the user who created this token
+    user_id = token_data.get("createdBy")
+    if not user_id:
+        return jsonify({"error": "Invalid token - no associated user"}), 401
+    
+    # Get user details
     user = get_user_by_id(user_id)
-
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Update last used timestamp
+    db.collection("agent_tokens").document(token).update({
+        "lastUsed": datetime.utcnow()
+    })
+    
+    # Return user info and scopes
     return jsonify({
         "userId": user["id"],
         "email": user.get("email"),
         "displayName": user.get("displayName"),
         "createdAt": user.get("createdAt"),
-        "scopes": scopes
+        "scopes": token_data.get("scopes", [])
     }), 200
 
 @agent_bp.route("/tokens/<token_id>/renew", methods=["PUT"])
