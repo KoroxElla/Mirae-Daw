@@ -216,7 +216,7 @@ export default function AgentDashboard({ agentId, onLogout }: AgentDashboardProp
               // Handle specific error messages
               if (data.error === "Token not found") {
                   setTokenError("Invalid token. Please check and try again.");
-              } else if (data.error === "Token has been revoked") {
+              } else if (data.error === "Token is revoked") {
                   setTokenError("This token has been revoked and is no longer valid.");
               } else if (data.error === "Token has expired") {
                   setTokenError("This token has expired. Please ask the user to generate a new one.");
