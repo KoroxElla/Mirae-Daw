@@ -6,7 +6,7 @@ from services.agent_service import (
 )
 from services.jwt_middleware import require_auth, require_agent_role
 from services.firebase_service import get_user_role
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from services.firebase_service import db
 
@@ -209,7 +209,7 @@ def verify_agent_token():
     
     # Check if token has expired
     expires_at = token_data.get("expiresAt")
-    if expires_at and expires_at < datetime.utcnow():
+    if expires_at and expires_at < datetime.now(timezone.utc):
         response = jsonify({"error": "Token has expired"})
         response.headers.add('Access-Control-Allow-Origin', 'https://mirae-daw-auo7.vercel.app')
         return response, 401
