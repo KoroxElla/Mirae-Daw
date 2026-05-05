@@ -230,7 +230,7 @@ def verify_agent_token():
     
     # Update last used timestamp
     db.collection("agent_tokens").document(token).update({
-        "lastUsed": datetime.utcnow()
+        "lastUsed": datetime.now(timezone.utc)
     })
 
     # Return user info and scopes

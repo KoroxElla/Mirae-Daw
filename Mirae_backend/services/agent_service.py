@@ -1,5 +1,5 @@
 from firebase_admin import firestore
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import string
 from services.crypto_service import decrypt_text
@@ -19,8 +19,8 @@ def create_agent_token(user_id, expiry_days=30, scopes=None):
     token_data = {
         "token": token,
         "createdBy": user_id,
-        "createdAt": datetime.utcnow(),
-        "expiresAt": datetime.utcnow() + timedelta(days=expiry_days),
+        "createdAt": datetime.now(timezone.utc),
+        "expiresAt": datetime.now(timezone.utc) + timedelta(days=expiry_days),
         "scopes": scopes,
         "isActive": True,
         "lastUsed": None
@@ -52,7 +52,7 @@ def revoke_agent_token(token_id):
     """Revoke an agent token"""
     db.collection("agent_tokens").document(token_id).update({
         "isActive": False,
-        "revokedAt": datetime.utcnow()
+        "revokedAt": datetime.now(timezone.utc)
     })
 
 def validate_agent_token(token):
@@ -67,12 +67,12 @@ def validate_agent_token(token):
     if not data.get("isActive", False):
         return None, "Token is revoked"
     
-    if data.get("expiresAt") < datetime.utcnow():
+    if data.get("expiresAt") < datetime.now(timezone.utc):
         return None, "Token has expired"
     
     # Update last used timestamp
     db.collection("agent_tokens").document(token).update({
-        "lastUsed": datetime.utcnow()
+        "lastUsed": datetime.now(timezone.utc)
     })
     
     return data.get("scopes", []), None
@@ -118,7 +118,7 @@ def get_user_by_id(user_id):
 # Emotion Analytics
 def get_user_emotion_history(user_id, days=30):
     """Get emotion history for a user over specified days"""
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     entries_ref = db.collection("users").document(user_id).collection("entries")
     entries = entries_ref.where("createdAt", ">=", cutoff_date).order_by("createdAt").stream()
